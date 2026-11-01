@@ -5,7 +5,7 @@ public class Main {
     public static void main(String[] args) {
         ServeiXML serveiXML = new ServeiXML();
         
-        Cataleg cataleg = serveiXML.carregarCataleg("/resources/assets/plantilla.xml");
+        Cataleg cataleg =serveiXML.carregarCataleg("assets/plantilla.xml");
 
         System.out.println("Recintos cargados: " + cataleg.getRecintes().size());
         System.out.println("Eventos cargados: " + cataleg.getEsdeveniments().size());

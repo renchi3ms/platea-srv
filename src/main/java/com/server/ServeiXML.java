@@ -1,7 +1,8 @@
 package com.server;
 
 import com.model.*;
-import java.io.File;
+import java.io.InputStream;
+import java.io.FileNotFoundException;
 import java.time.LocalDateTime;
 import java.util.HashMap;
 
@@ -27,8 +28,20 @@ public class ServeiXML {
             DocumentBuilder builder =
                     factory.newDocumentBuilder();
 
-            Document doc =
-                    builder.parse(new File(fitxer));
+            InputStream archivo = ServeiXML.class
+                    .getClassLoader()
+                    .getResourceAsStream(fitxer);
+
+            if (archivo == null) {
+                throw new FileNotFoundException(
+                        "No se encuentra el archivo: " + fitxer);
+            }
+
+            Document doc;
+
+            try (InputStream xml = archivo) {
+                doc = builder.parse(xml);
+            }
 
             doc.getDocumentElement().normalize();
 
