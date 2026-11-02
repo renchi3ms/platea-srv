@@ -3,6 +3,7 @@ package com.model;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 
+
 public class Esdeveniment{
     private String id;
     private String nom;

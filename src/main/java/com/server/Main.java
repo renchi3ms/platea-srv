@@ -4,9 +4,16 @@ import org.java_websocket.server.WebSocketServer;
 import org.java_websocket.WebSocket;
 import org.java_websocket.handshake.ClientHandshake;
 
+import org.json.JSONArray;
 import org.json.JSONObject;
 
+import com.model.Cataleg;
+import com.model.Esdeveniment;
+import com.model.Recinte;
+import com.model.TipusEntrada;
+
 import java.net.InetSocketAddress;
+import java.util.ArrayList;
 
 /**
  * Servidor WebSocket que manté l'estat complet dels clients i objectes seleccionables.
@@ -23,6 +30,24 @@ public class Main extends WebSocketServer {
     // Claus JSON
     private static final String K_TYPE = "type";
     private static final String K_VALUE = "value";
+    private static final String K_RECINTE = "recinte";
+    private static final String FITXER_XML = "assets/plantilla.xml";
+    private static final String K_ESDEVENIMENTS = "esdeveniments";
+
+    private static final String K_ESDEV_ID = "id";
+    private static final String K_ESDEV_NOM = "nom";
+    private static final String K_ESDEV_DATAHORA = "dataHora";
+    private static final String K_ESDEV_CATEGORIA = "categoria";
+    private static final String K_ESDEV_DESCRIPIO = "descripcio";
+    private static final String K_ESDEV_IMATGE = "imatge";
+    private static final String K_ESDEV_RECINTE = "recinte";
+    private static final String K_ESDEV_TIPUSENTRADES = "tipusEntrades";
+
+    private static final String K_ENTRADA_ID = "id";
+    private static final String K_ENTRADA_NOM = "nom";
+    private static final String K_ENTRADA_ZONA = "zona";
+    private static final String K_ENTRADA_PREU = "preu";
+    private static final String K_ENTRADA_QUOTA = "quota";
 
     /**
      * Crea un servidor WebSocket que escolta a l'adreça indicada.
@@ -72,6 +97,24 @@ public class Main extends WebSocketServer {
                 case "bounce" -> {
                     conn.send(obj.toString());
                 }
+
+                case "esdev" -> {
+                    Cataleg cataleg = new ServeiXML().carregarCataleg(FITXER_XML);
+                    ArrayList<Esdeveniment> esdeveniments = new ArrayList<Esdeveniment>();
+                    
+                    for (Esdeveniment e : cataleg.getEsdeveniments()) {
+                        if (e.getRecinte().getId().equals(obj.optString(K_RECINTE, ""))) {
+                            esdeveniments.add(e);
+                        }
+                    }
+
+                    JSONObject response = new JSONObject();
+
+                    response.put(K_TYPE, "esdev");
+
+                    conn.send(getEsdevResponse(esdeveniments, response).toString());
+
+                }
             }
 
         } catch (Exception ex) {
@@ -100,4 +143,40 @@ public class Main extends WebSocketServer {
 
         System.out.println("Server running on port " + DEFAULT_PORT + ". Press Ctrl+C to stop it.");
     }
+
+    private static JSONObject getEsdevResponse(ArrayList<Esdeveniment> esdeveniments, JSONObject response) {
+        
+
+        JSONObject esdevsJSON = new JSONObject();
+
+        for (Esdeveniment e : esdeveniments) {
+            JSONObject eJSON = new JSONObject();
+            eJSON.put(K_ESDEV_ID, e.getId());
+            eJSON.put(K_ESDEV_NOM, e.getNom());
+            eJSON.put(K_ESDEV_DATAHORA, e.getDataHora().toString());
+            eJSON.put(K_ESDEV_CATEGORIA, e.getCategoria());
+            eJSON.put(K_ESDEV_DESCRIPIO, e.getDescripcio());
+            eJSON.put(K_ESDEV_IMATGE, e.getImatge());
+            eJSON.put(K_ESDEV_RECINTE, e.getRecinte().getId());
+
+            JSONArray entradesJSON = new JSONArray();
+            for (TipusEntrada te : e.getTipusEntrades()) {
+                JSONObject teJSON = new JSONObject();
+                teJSON.put(K_ENTRADA_ID, te.getId());
+                teJSON.put(K_ENTRADA_NOM, te.getNom());
+                teJSON.put(K_ENTRADA_ZONA, te.getZona().getId());
+                teJSON.put(K_ENTRADA_PREU, te.getPreu());
+                teJSON.put(K_ENTRADA_QUOTA, te.getQuota());
+                entradesJSON.put(teJSON);
+            }
+
+            eJSON.put(K_ESDEV_TIPUSENTRADES, entradesJSON);
+
+            esdevsJSON.put(e.getId(), eJSON);
+        }
+
+        response.put(K_ESDEVENIMENTS, esdevsJSON);
+        return response;
+    }
+
 }
