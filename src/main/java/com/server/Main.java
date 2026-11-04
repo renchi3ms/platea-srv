@@ -70,7 +70,6 @@ public class Main extends WebSocketServer {
         bienvenida.put("message", "Bienvenido al servidor");
 
         conn.send(bienvenida.toString());
-        
     }
 
     /** Elimina el client del registre i envia l’STATE complet. */
@@ -101,9 +100,11 @@ public class Main extends WebSocketServer {
                 case "esdev" -> {
                     Cataleg cataleg = new ServeiXML().carregarCataleg(FITXER_XML);
                     ArrayList<Esdeveniment> esdeveniments = new ArrayList<Esdeveniment>();
+
+                    String recinte = obj.optString(K_RECINTE, "");
                     
                     for (Esdeveniment e : cataleg.getEsdeveniments()) {
-                        if (e.getRecinte().getId().equals(obj.optString(K_RECINTE, ""))) {
+                        if (recinte.isEmpty() || e.getRecinte().getId().equals(recinte)) {
                             esdeveniments.add(e);
                         }
                     }
