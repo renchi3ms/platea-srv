@@ -70,7 +70,6 @@ public class Main extends WebSocketServer {
         bienvenida.put("message", "Bienvenido al servidor");
 
         conn.send(bienvenida.toString());
-        
     }
 
     /** Elimina el client del registre i envia l’STATE complet. */
