@@ -27,7 +27,7 @@ public class Main extends WebSocketServer {
     /** Port per defecte on escolta el servidor. */
     public static final int DEFAULT_PORT = 3000;
 
-    // Claus JSON
+    // Claus JSONel SRV les reserva assignant u
     private static final String K_TYPE = "type";
     private static final String K_VALUE = "value";
     private static final String K_RECINTE = "recinte";
@@ -100,10 +100,11 @@ public class Main extends WebSocketServer {
 
                 case "esdev" -> {
                     Cataleg cataleg = new ServeiXML().carregarCataleg(FITXER_XML);
+                    String recinte = obj.optString(K_RECINTE, "");
                     ArrayList<Esdeveniment> esdeveniments = new ArrayList<Esdeveniment>();
-                    
+
                     for (Esdeveniment e : cataleg.getEsdeveniments()) {
-                        if (e.getRecinte().getId().equals(obj.optString(K_RECINTE, ""))) {
+                        if (recinte.isEmpty() || e.getRecinte().getId().equals(recinte)) {
                             esdeveniments.add(e);
                         }
                     }
@@ -114,6 +115,10 @@ public class Main extends WebSocketServer {
 
                     conn.send(getEsdevResponse(esdeveniments, response).toString());
 
+                }
+
+                case "purchase" -> {
+                    
                 }
             }
 
