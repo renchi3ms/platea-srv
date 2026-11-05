@@ -29,7 +29,6 @@ public class UtilsWS {
                 @Override
                 public void onOpen(ServerHandshake handshake) {
                     String message = "WS connected to: " + getURI();
-                    System.out.println(message);
                     if (onOpenCallBack != null) {
                         onOpenCallBack.accept(message);
                     }
