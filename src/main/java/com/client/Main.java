@@ -133,9 +133,6 @@ public class Main extends Application {
                 System.out.println("Bounce recibido: " + response);
                 break;
 
-            case "welcome":
-                break;
-
             case "esdev": {
                 JSONObject esdevsJSON = msgObj.getJSONObject("esdeveniments");
                 ArrayList<Esdeveniment> esdeveniments = new ArrayList<>();

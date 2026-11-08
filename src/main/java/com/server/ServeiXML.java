@@ -1,9 +1,13 @@
 package com.server;
 
 import com.model.*;
+import java.io.BufferedReader;
 import java.io.InputStream;
+import java.io.InputStreamReader;
 import java.io.FileNotFoundException;
+import java.nio.charset.StandardCharsets;
 import java.time.LocalDateTime;
+import java.util.ArrayList;
 import java.util.HashMap;
 
 import javax.xml.parsers.DocumentBuilder;
@@ -84,6 +88,16 @@ public class ServeiXML {
                     mapaZones.put(zona.getId(), zona);
                 }
 
+                MatriuSeients plantilla =
+                        carregarMapa("assets/mapes/" + id + ".map");
+
+                if (plantilla == null) {
+                    throw new IllegalStateException(
+                            "No es troba el mapa de " + id);
+                }
+
+                recinte.setPlantilla(plantilla);
+
                 cataleg.afegirRecinte(recinte);
 
                 mapaRecintes.put(id, recinte);
@@ -153,5 +167,78 @@ public class ServeiXML {
         }
 
         return cataleg;
+    }
+
+    /**
+     * Llegeix el fitxer de mapa (rejilla literal d'un recinte) i en construeix
+     * la plantilla: cada token es un id de zona i "." es una casella buida.
+     * Totes les files han de tenir el mateix nombre de tokens.
+     */
+    private MatriuSeients carregarMapa(String fitxer) {
+
+        InputStream xml = ServeiXML.class
+                .getClassLoader()
+                .getResourceAsStream(fitxer);
+
+        if (xml == null) {
+            throw new IllegalStateException(
+                    "No es troba el mapa: " + fitxer);
+        }
+
+        try (BufferedReader reader = new BufferedReader(
+                new InputStreamReader(xml, StandardCharsets.UTF_8))) {
+
+            ArrayList<String[]> files = new ArrayList<>();
+            int amplada = -1;
+
+            String linea = reader.readLine();
+
+            while (linea != null) {
+
+                linea = linea.trim();
+
+                if (!linea.isEmpty()) {
+
+                    String[] tokens = linea.split("\\s+");
+
+                    if (amplada == -1) {
+                        amplada = tokens.length;
+                    } else if (tokens.length != amplada) {
+                        throw new IllegalStateException(
+                                "Mapa " + fitxer + ": fila "
+                                        + (files.size() + 1)
+                                        + " te " + tokens.length
+                                        + " tokens (se'n esperaven " + amplada + ")");
+                    }
+
+                    files.add(tokens);
+                }
+
+                linea = reader.readLine();
+            }
+
+            MatriuSeients plantilla =
+                    new MatriuSeients(files.size(), amplada);
+
+            for (int f = 0; f < files.size(); f++) {
+
+                String[] tokens = files.get(f);
+
+                for (int c = 0; c < tokens.length; c++) {
+
+                    if (!".".equals(tokens[c])) {
+                        plantilla.setZona(f, c, tokens[c]);
+                    }
+                }
+            }
+
+            return plantilla;
+
+        } catch (IllegalStateException e) {
+            throw e;
+        } catch (Exception e) {
+            throw new IllegalStateException(
+                    "Error llegint el mapa: " + fitxer, e);
+        }
     }
 }
