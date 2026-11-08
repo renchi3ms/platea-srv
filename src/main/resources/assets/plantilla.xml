@@ -3,17 +3,17 @@
   <!-- Recintes amb les seves zones -->
   <recintes>
     <recinte id="R1" nom="Sala Petita">
-      <zona id="Z1" nom="Platea" tipus="numerada" aforament="60"/>
-      <zona id="Z2" nom="Dempeus" tipus="general" aforament="40"/>
+      <zona id="Z1" nom="Platea" tipus="numerada" aforament="42"/>
+      <zona id="Z2" nom="Dempeus" tipus="general" aforament="44"/>
     </recinte>
     <recinte id="R2" nom="Teatre Principal">
-      <zona id="Z3" nom="Platea Central" tipus="numerada" aforament="300"/>
-      <zona id="Z4" nom="Anfiteatre" tipus="numerada" aforament="150"/>
-      <zona id="Z5" nom="Loft General" tipus="general" aforament="50"/>
+      <zona id="Z3" nom="Platea Central" tipus="numerada" aforament="84"/>
+      <zona id="Z4" nom="Anfiteatre" tipus="numerada" aforament="120"/>
+      <zona id="Z5" nom="Loft General" tipus="general" aforament="146"/>
     </recinte>
     <recinte id="R3" nom="Espai Exterior">
-      <zona id="Z6" nom="Pista Gran" tipus="general" aforament="1000"/>
-      <zona id="Z7" nom="Zona VIP" tipus="numerada" aforament="100"/>
+      <zona id="Z6" nom="Pista Gran" tipus="general" aforament="88"/>
+      <zona id="Z7" nom="Zona VIP" tipus="numerada" aforament="477"/>
     </recinte>
   </recintes>
 
