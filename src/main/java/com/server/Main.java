@@ -19,6 +19,13 @@ import com.model.Venda;
 import java.net.InetSocketAddress;
 import java.util.ArrayList;
 
+import java.io.IOException;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.Paths;
+import java.time.LocalDateTime;
+import java.util.UUID;
+
 /**
  * Servidor WebSocket que manté l'estat complet dels clients i objectes seleccionables.
  *
@@ -121,7 +128,101 @@ public class Main extends WebSocketServer {
                 }
 
                 case "purchase" -> {
-                    
+                    JSONObject response = new JSONObject();
+                    response.put(K_TYPE, "purchase");
+
+                    try {
+                        String nombre = obj.getString("nombre").trim();
+                        String correo = obj.getString("correo").trim();
+                        JSONArray entradas = obj.getJSONArray("entradas");
+
+                        if (nombre.isEmpty() || correo.isEmpty() || entradas.isEmpty()) {
+                            throw new IllegalArgumentException("Falten dades de la compra.");
+                        }
+
+                        Cataleg cataleg = new ServeiXML().carregarCataleg(FITXER_XML);
+                        JSONArray localitzadors = new JSONArray();
+
+                        // Validar todas las entradas antes de guardar la reserva.
+                        for (int i = 0; i < entradas.length(); i++) {
+                            JSONObject entradaJSON = entradas.getJSONObject(i);
+
+                            String esdevId = entradaJSON.getString("esdevenimentId");
+                            String tipusId = entradaJSON.getString("tipusEntradaId");
+                            int quantitat = entradaJSON.getInt("quantitat");
+
+                            if (quantitat <= 0) {
+                                throw new IllegalArgumentException("Quantitat no vàlida.");
+                            }
+
+                            Esdeveniment esdev = cataleg.getEsdeveniments().stream()
+                                    .filter(e -> e.getId().equals(esdevId))
+                                    .findFirst()
+                                    .orElse(null);
+
+                            if (esdev == null) {
+                                throw new IllegalArgumentException("Esdeveniment no trobat: " + esdevId);
+                            }
+
+                            TipusEntrada tipusEntrada = esdev.getTipusEntrades().stream()
+                                    .filter(t -> t.getId().equals(tipusId))
+                                    .findFirst()
+                                    .orElse(null);
+
+                            if (tipusEntrada == null) {
+                                throw new IllegalArgumentException("Tipus d'entrada no trobat: " + tipusId);
+                            }
+
+                            if (!"general".equalsIgnoreCase(tipusEntrada.getZona().getTipus())) {
+                                throw new IllegalArgumentException(
+                                        "Només es poden comprar entrades generals."
+                                );
+                            }
+                        }
+
+                        // Crear y guardar las reservas.
+                        for (int i = 0; i < entradas.length(); i++) {
+                            JSONObject entradaJSON = entradas.getJSONObject(i);
+
+                            String esdevId = entradaJSON.getString("esdevenimentId");
+                            String tipusId = entradaJSON.getString("tipusEntradaId");
+                            int quantitat = entradaJSON.getInt("quantitat");
+
+                            String localitzador = UUID.randomUUID()
+                                    .toString()
+                                    .replace("-", "")
+                                    .substring(0, 12)
+                                    .toUpperCase();
+
+                            JSONObject reserva = new JSONObject();
+                            reserva.put("tipusEntrada", tipusId);
+                            reserva.put("localitzador", localitzador);
+                            reserva.put("nom", nombre);
+                            reserva.put("correu", correo);
+                            reserva.put("quantitat", quantitat);
+
+                            guardarReserva(esdevId, reserva);
+
+                            JSONObject resultatEntrada = new JSONObject();
+                            resultatEntrada.put("esdevenimentId", esdevId);
+                            resultatEntrada.put("tipusEntradaId", tipusId);
+                            resultatEntrada.put("localitzador", localitzador);
+                            resultatEntrada.put("quantitat", quantitat);
+
+                            localitzadors.put(resultatEntrada);
+                        }
+
+                        response.put("status", "OK");
+                        response.put("localitzadors", localitzadors);
+
+                    } catch (Exception e) {
+                        response.put("status", "ERROR");
+                        response.put("message", e.getMessage() != null
+                                ? e.getMessage()
+                                : "Error en processar la reserva.");
+                    }
+
+                    conn.send(response.toString());
                 }
 
                 case "mapa" -> {
@@ -176,6 +277,28 @@ public class Main extends WebSocketServer {
         System.out.println("Server running on port " + DEFAULT_PORT + ". Press Ctrl+C to stop it.");
     }
 
+    private static void guardarReserva(String esdevId, JSONObject reserva)
+        throws IOException {
+
+        Path carpeta = Paths.get("data");
+        Files.createDirectories(carpeta);
+
+        Path archivo = carpeta.resolve(esdevId + ".json");
+
+        JSONArray reservas;
+
+        if (Files.exists(archivo)) {
+            String contenido = Files.readString(archivo);
+            reservas = new JSONArray(contenido);
+        } else {
+            reservas = new JSONArray();
+        }
+
+        reservas.put(reserva);
+
+        Files.writeString(archivo, reservas.toString(4));
+    }
+
     private static JSONObject getEsdevResponse(ArrayList<Esdeveniment> esdeveniments, JSONObject response) {
         
 
@@ -197,6 +320,7 @@ public class Main extends WebSocketServer {
                 teJSON.put(K_ENTRADA_ID, te.getId());
                 teJSON.put(K_ENTRADA_NOM, te.getNom());
                 teJSON.put(K_ENTRADA_ZONA, te.getZona().getId());
+                teJSON.put("tipoZona", te.getZona().getTipus());
                 teJSON.put(K_ENTRADA_PREU, te.getPreu());
                 teJSON.put(K_ENTRADA_QUOTA, te.getQuota());
                 entradesJSON.put(teJSON);

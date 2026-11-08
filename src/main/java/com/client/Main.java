@@ -52,6 +52,7 @@ public class Main extends Application {
             System.out.println("1. ping");
             System.out.println("2. bounce");
             System.out.println("3. esdev");
+            System.out.println("4. purchase");
             System.out.println("0. sortir");
             System.out.print("Tria una opcio: ");
             String option = scanner.nextLine().trim();
@@ -66,9 +67,18 @@ public class Main extends Application {
                 case "3":
                     sendMessage("esdev");
                     break;
+                case "4":
+                    sendPurchase(scanner);
+                    break;
                 case "0":
                     System.out.println("Bye!");
-                    return;
+
+                    if (wsClient != null) {
+                        wsClient.forceExit();
+                    }
+
+                    System.exit(0);
+                    break;
                 default:
                     System.out.println("Not valid option: " + option);
                     break;
@@ -87,6 +97,59 @@ public class Main extends Application {
         // Esperar la resposta abans de tornar a mostrar el menu
         try {
             String response = inbox.poll(2, TimeUnit.SECONDS);
+            if (response != null) {
+                printMessage(response);
+            } else {
+                System.out.println("Sense resposta del servidor.");
+            }
+        } catch (InterruptedException e) {
+            Thread.currentThread().interrupt();
+        }
+    }
+
+    private static void sendPurchase(Scanner scanner) {
+        System.out.print("ID de l'esdeveniment: ");
+        String esdevenimentId = scanner.nextLine().trim();
+
+        System.out.print("ID del tipus d'entrada: ");
+        String tipusEntradaId = scanner.nextLine().trim();
+
+        System.out.print("Quantitat: ");
+        int quantitat;
+
+        try {
+            quantitat = Integer.parseInt(scanner.nextLine().trim());
+        } catch (NumberFormatException e) {
+            System.out.println("Quantitat no valida.");
+            return;
+        }
+
+        System.out.print("Nom del comprador: ");
+        String nombre = scanner.nextLine().trim();
+
+        System.out.print("Correu del comprador: ");
+        String correo = scanner.nextLine().trim();
+
+        JSONObject entrada = new JSONObject();
+        entrada.put("esdevenimentId", esdevenimentId);
+        entrada.put("tipusEntradaId", tipusEntradaId);
+        entrada.put("quantitat", quantitat);
+
+        JSONArray entradas = new JSONArray();
+        entradas.put(entrada);
+
+        JSONObject msg = new JSONObject();
+        msg.put("type", "purchase");
+        msg.put("nombre", nombre);
+        msg.put("correo", correo);
+        msg.put("entradas", entradas);
+
+        inbox.clear();
+        wsClient.safeSend(msg.toString());
+
+        try {
+            String response = inbox.poll(5, TimeUnit.SECONDS);
+
             if (response != null) {
                 printMessage(response);
             } else {
@@ -177,6 +240,30 @@ public class Main extends Application {
                             + " (zona " + te.getZona().getId() + ", preu " + te.getPreu()
                             + ", quota " + te.getQuota() + ")");
                     }
+                }
+                break;
+            }
+            case "purchase": {
+                String status = msgObj.optString("status", "ERROR");
+
+                if ("OK".equals(status)) {
+                    System.out.println("COMPRA CORRECTA");
+
+                    JSONArray localitzadors = msgObj.getJSONArray("localitzadors");
+
+                    for (int i = 0; i < localitzadors.length(); i++) {
+                        JSONObject reserva = localitzadors.getJSONObject(i);
+
+                        System.out.println(
+                            "Esdeveniment: " + reserva.getString("esdevenimentId")
+                            + " | Tipus entrada: " + reserva.getString("tipusEntradaId")
+                            + " | Quantitat: " + reserva.getInt("quantitat")
+                            + " | Localitzador: " + reserva.getString("localitzador")
+                        );
+                    }
+                } else {
+                    System.out.println("ERROR EN LA COMPRA: "
+                            + msgObj.optString("message", "Error desconegut."));
                 }
                 break;
             }
