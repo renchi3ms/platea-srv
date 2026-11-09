@@ -11,7 +11,6 @@ import com.model.Cataleg;
 import com.model.Esdeveniment;
 import com.model.MapaResultat;
 import com.model.MatriuSeients;
-import com.model.Recinte;
 import com.model.Seient;
 import com.model.TipusEntrada;
 import com.model.Venda;
@@ -20,7 +19,6 @@ import java.net.InetSocketAddress;
 import java.util.ArrayList;
 
 import java.sql.Connection;
-import com.server.Database;
 import java.util.UUID;
 
 /**
@@ -365,29 +363,29 @@ public class Main extends WebSocketServer {
                     filaJSON.put(JSONObject.NULL);
                 } else {
 
-                    JSONArray celula = new JSONArray();
-                    celula.put(s.getZonaId());
-                    celula.put(s.getFila());
-                    celula.put(s.getNumero());
+                    JSONArray celda = new JSONArray();
+                    celda.put(s.getZonaId());
+                    celda.put(s.getFila());
+                    celda.put(s.getNumero());
 
                     if (s.estaVengut()) {
 
                         Venda v = resultat.getVendes().get(s.getVendaRef());
 
-                        celula.put("V");
+                        celda.put("V");
 
                         if (v != null) {
-                            celula.put(v.getCodi());
-                            celula.put(v.getCompradorNom());
-                            celula.put(v.getCompradorCorreu());
-                            celula.put(v.getDataCompra().toString());
-                            celula.put(v.getPreuPagat());
+                            celda.put(v.getCodi());
+                            celda.put(v.getCompradorNom());
+                            celda.put(v.getCompradorCorreu());
+                            celda.put(v.getDataCompra().toString());
+                            celda.put(v.getPreuPagat());
                         }
                     } else {
-                        celula.put("L");
+                        celda.put("L");
                     }
 
-                    filaJSON.put(celula);
+                    filaJSON.put(celda);
                 }
             }
 
