@@ -1,4 +1,3 @@
-
 package com.server;
 
 import java.sql.Connection;
@@ -25,7 +24,6 @@ public class ServeiSQLite {
 
         try (Connection conn = Database.connect()) {
 
-            // 1. CARREGAR RECINTES
             String sqlRecintes = "SELECT * FROM recintes";
 
             try (PreparedStatement stmt = conn.prepareStatement(sqlRecintes);
@@ -43,7 +41,6 @@ public class ServeiSQLite {
                 }
             }
 
-            // 2. CARREGAR ZONES
             String sqlZones = "SELECT * FROM zones";
 
             try (PreparedStatement stmt = conn.prepareStatement(sqlZones);
@@ -70,7 +67,6 @@ public class ServeiSQLite {
                 }
             }
 
-            // 3. CARREGAR ESDEVENIMENTS
             String sqlEsdeveniments = "SELECT * FROM esdeveniments";
 
             try (PreparedStatement stmt = conn.prepareStatement(sqlEsdeveniments);
@@ -101,7 +97,6 @@ public class ServeiSQLite {
                 }
             }
 
-            // 4. CARREGAR TIPUS D'ENTRADA
             String sqlEntrades = "SELECT * FROM tipus_entrada";
 
             try (PreparedStatement stmt = conn.prepareStatement(sqlEntrades);
@@ -139,5 +134,86 @@ public class ServeiSQLite {
         }
 
         return cataleg;
+    }
+
+    public void guardarCataleg(Cataleg cataleg) {
+        try (Connection conn = Database.connect()) {
+            String sqlRecinte = "INSERT OR IGNORE INTO recintes(id, nom) VALUES (?, ?)";
+
+            try (PreparedStatement stmt = conn.prepareStatement(sqlRecinte)) {
+                for (Recinte r : cataleg.getRecintes()) {
+
+                    stmt.setString(1, r.getId());
+                    stmt.setString(2, r.getNom());
+
+                    stmt.executeUpdate();
+                }
+            }
+            String sqlZona =
+                "INSERT OR IGNORE INTO zones(id, nom, tipus, aforament, recinte_id) VALUES (?, ?, ?, ?, ?)";
+
+            try (PreparedStatement stmt = conn.prepareStatement(sqlZona)) {
+
+                for (Recinte r : cataleg.getRecintes()) {
+
+                    for (Zona z : r.getZones()) {
+
+                        stmt.setString(1, z.getId());
+                        stmt.setString(2, z.getNom());
+                        stmt.setString(3, z.getTipus());
+                        stmt.setInt(4, z.getAforament());
+                        stmt.setString(5, r.getId());
+
+                        stmt.executeUpdate();
+                    }
+                }
+            }
+
+            String sqlEsdev ="INSERT OR IGNORE INTO esdeveniments(id, nom, data_hora, categoria, descripcio, imatge, recinte_id) " +
+            "VALUES (?, ?, ?, ?, ?, ?, ?)";
+
+            try (PreparedStatement stmt = conn.prepareStatement(sqlEsdev)) {
+
+                for (Esdeveniment e : cataleg.getEsdeveniments()) {
+
+                    stmt.setString(1, e.getId());
+                    stmt.setString(2, e.getNom());
+                    stmt.setString(3, e.getDataHora().toString());
+                    stmt.setString(4, e.getCategoria());
+                    stmt.setString(5, e.getDescripcio());
+                    stmt.setString(6, e.getImatge());
+                    stmt.setString(7, e.getRecinte().getId());
+
+                    stmt.executeUpdate();
+                }
+            }
+
+            String sqlEntrada =
+                "INSERT OR IGNORE INTO tipus_entrada(id, nom, preu, quota, zona_id, esdeveniment_id) " +
+                "VALUES (?, ?, ?, ?, ?, ?)";
+
+            try (PreparedStatement stmt = conn.prepareStatement(sqlEntrada)) {
+
+                for (Esdeveniment e : cataleg.getEsdeveniments()) {
+
+                    for (TipusEntrada te : e.getTipusEntrades()) {
+
+                        stmt.setString(1, te.getId());
+                        stmt.setString(2, te.getNom());
+                        stmt.setDouble(3, te.getPreu());
+                        stmt.setInt(4, te.getQuota());
+                        stmt.setString(5, te.getZona().getId());
+                        stmt.setString(6, e.getId());
+
+                    stmt.executeUpdate();
+                    }
+                }
+            }
+
+            System.out.println("Catàleg migrat correctament a SQLite");
+
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
     }
 }

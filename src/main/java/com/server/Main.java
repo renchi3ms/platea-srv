@@ -102,7 +102,7 @@ public class Main extends WebSocketServer {
                 }
 
                 case "esdev" -> {
-                    Cataleg cataleg = new ServeiXML().carregarCataleg(FITXER_XML);
+                    Cataleg cataleg = new ServeiSQLite().carregarCataleg();
                     ArrayList<Esdeveniment> esdeveniments = new ArrayList<Esdeveniment>();
                     
                     for (Esdeveniment e : cataleg.getEsdeveniments()) {
@@ -156,7 +156,17 @@ public class Main extends WebSocketServer {
         }
 
         DatabaseInitializer.initialize();
+        try {
+            ServeiXML serveiXML = new ServeiXML();
 
+            Cataleg cataleg = serveiXML.carregarCataleg("assets/plantilla.xml");
+            ServeiSQLite serveiSQLite = new ServeiSQLite();
+
+            serveiSQLite.guardarCataleg(cataleg);
+
+        } catch (Exception e) {
+           e.printStackTrace();
+    }
         Main server = new Main(new InetSocketAddress(DEFAULT_PORT));
         server.start();
 

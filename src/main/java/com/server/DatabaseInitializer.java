@@ -12,7 +12,6 @@ public class DatabaseInitializer {
                 Statement stmt = conn.createStatement()
         ) {
 
-            // RECINTES
             stmt.execute("""
                 CREATE TABLE IF NOT EXISTS recintes (
                     id TEXT PRIMARY KEY,
@@ -46,7 +45,6 @@ public class DatabaseInitializer {
                 )
             """);
 
-            // ESDEVENIMENTS
             stmt.execute("""
                 CREATE TABLE IF NOT EXISTS esdeveniments (
                     id TEXT PRIMARY KEY,
