@@ -168,7 +168,7 @@ public class Main extends Application {
     }
 
     public static void connectToServer() {
-        wsClient = UtilsWS.getSharedInstance("ws://localhost:3000");
+        wsClient = UtilsWS.getSharedInstance("wss://platea4.ieti.site:443");
 
         wsClient.onOpen((response) -> {
         });

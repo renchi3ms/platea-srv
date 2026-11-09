@@ -4,7 +4,7 @@ import java.util.Map;
 
 /**
  * Resultat de construir el mapa d'un esdeveniment: la matriu global
- * de seients i les vendes (mock) associades, clau = codi de venda.
+ * de seients i les vendes associades, clau = codi de venda.
  */
 public class MapaResultat {
 

@@ -36,6 +36,13 @@ public class ServeiSQLite {
                         rs.getString("nom")
                     );
 
+                    try {
+                        recinte.setPlantilla(
+                                new ServeiMapes().carregar(recinte.getId()));
+                    } catch (IllegalStateException e) {
+                        System.out.println("Avís: " + e.getMessage());
+                    }
+
                     recintes.put(recinte.getId(), recinte);
                     cataleg.afegirRecinte(recinte);
                 }
@@ -134,6 +141,22 @@ public class ServeiSQLite {
         }
 
         return cataleg;
+    }
+
+    /** True si la base de dades encara no conté cap esdeveniment. */
+    public boolean estaBuida() {
+
+        try (Connection conn = Database.connect();
+             PreparedStatement stmt =
+                     conn.prepareStatement("SELECT COUNT(*) FROM esdeveniments");
+             ResultSet rs = stmt.executeQuery()) {
+
+            return !rs.next() || rs.getInt(1) == 0;
+
+        } catch (Exception e) {
+            e.printStackTrace();
+            return true;
+        }
     }
 
     public void guardarCataleg(Cataleg cataleg) {
