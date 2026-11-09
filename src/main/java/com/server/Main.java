@@ -9,16 +9,14 @@ import org.json.JSONObject;
 
 import com.model.Cataleg;
 import com.model.Esdeveniment;
-import com.model.MatriuSeients;
-import com.model.MapaResultat;
 import com.model.Recinte;
-import com.model.Seient;
 import com.model.TipusEntrada;
-import com.model.Venda;
 
 import java.net.InetSocketAddress;
 import java.util.ArrayList;
 
+import java.sql.Connection;
+import com.server.Database;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -38,7 +36,7 @@ public class Main extends WebSocketServer {
     /** Port per defecte on escolta el servidor. */
     public static final int DEFAULT_PORT = 3000;
 
-    // Claus JSONel SRV les reserva assignant u
+    // Claus JSON
     private static final String K_TYPE = "type";
     private static final String K_VALUE = "value";
     private static final String K_RECINTE = "recinte";
@@ -81,6 +79,7 @@ public class Main extends WebSocketServer {
         bienvenida.put("message", "Bienvenido al servidor");
 
         conn.send(bienvenida.toString());
+        
     }
 
     /** Elimina el client del registre i envia l’STATE complet. */
@@ -109,14 +108,11 @@ public class Main extends WebSocketServer {
                 }
 
                 case "esdev" -> {
-                    Cataleg cataleg = new ServeiXML().carregarCataleg(FITXER_XML);
-                    String recinte = obj.optString(K_RECINTE, "");
+                    Cataleg cataleg = new ServeiSQLite().carregarCataleg();
                     ArrayList<Esdeveniment> esdeveniments = new ArrayList<Esdeveniment>();
-
+                    
                     for (Esdeveniment e : cataleg.getEsdeveniments()) {
-                        if (recinte.isEmpty() || e.getRecinte().getId().equals(recinte)) {
-                            esdeveniments.add(e);
-                        }
+                        esdeveniments.add(e);
                     }
 
                     JSONObject response = new JSONObject();
@@ -251,7 +247,7 @@ public class Main extends WebSocketServer {
             }
 
         } catch (Exception ex) {
-            System.out.println("Error processant missatge: " + ex);
+            System.out.println("JSON inválido");
         }
     }
 
@@ -270,13 +266,40 @@ public class Main extends WebSocketServer {
     // ----------------- Lifecycle util -----------------
 
     /** Punt d'entrada. */
+    /*
     public static void main(String[] args) {
         Main server = new Main(new InetSocketAddress(DEFAULT_PORT));
         server.start();
 
         System.out.println("Server running on port " + DEFAULT_PORT + ". Press Ctrl+C to stop it.");
     }
+    */
+    public static void main(String[] args) {
+        try {
+            Connection conn = Database.connect();
+            System.out.println("Conexió SQLite OK");
+            conn.close();
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
 
+        DatabaseInitializer.initialize();
+        try {
+            ServeiXML serveiXML = new ServeiXML();
+
+            Cataleg cataleg = serveiXML.carregarCataleg("assets/plantilla.xml");
+            ServeiSQLite serveiSQLite = new ServeiSQLite();
+
+            serveiSQLite.guardarCataleg(cataleg);
+
+        } catch (Exception e) {
+           e.printStackTrace();
+    }
+        Main server = new Main(new InetSocketAddress(DEFAULT_PORT));
+        server.start();
+
+        System.out.println("Server running on port " + DEFAULT_PORT + "zss Ctrl+C to stop it.");
+    }
     private static void guardarReserva(String esdevId, JSONObject reserva)
         throws IOException {
 
@@ -332,62 +355,6 @@ public class Main extends WebSocketServer {
         }
 
         response.put(K_ESDEVENIMENTS, esdevsJSON);
-        return response;
-    }
-
-    /** Serialitza la matriu global de seients: cada casella es null o [zona, fila, numero, estat, venda?]. */
-    private static JSONObject getMapaResponse(Esdeveniment esdev, MapaResultat resultat, JSONObject response) {
-
-        MatriuSeients mapa = resultat.getMatriu();
-
-        response.put("esdev", esdev.getId());
-        response.put("files", mapa.getFiles());
-        response.put("columnes", mapa.getColumnes());
-
-        JSONArray matriuJSON = new JSONArray();
-
-        for (int f = 0; f < mapa.getFiles(); f++) {
-
-            JSONArray filaJSON = new JSONArray();
-
-            for (int c = 0; c < mapa.getColumnes(); c++) {
-
-                Seient s = mapa.get(f, c);
-
-                if (s == null) {
-                    filaJSON.put(JSONObject.NULL);
-                } else {
-
-                    JSONArray celula = new JSONArray();
-                    celula.put(s.getZonaId());
-                    celula.put(s.getFila());
-                    celula.put(s.getNumero());
-
-                    if (s.estaVengut()) {
-
-                        Venda v = resultat.getVendes().get(s.getVendaRef());
-
-                        celula.put("V");
-
-                        if (v != null) {
-                            celula.put(v.getCodi());
-                            celula.put(v.getCompradorNom());
-                            celula.put(v.getCompradorCorreu());
-                            celula.put(v.getDataCompra().toString());
-                            celula.put(v.getPreuPagat());
-                        }
-                    } else {
-                        celula.put("L");
-                    }
-
-                    filaJSON.put(celula);
-                }
-            }
-
-            matriuJSON.put(filaJSON);
-        }
-
-        response.put("matriu", matriuJSON);
         return response;
     }
 
