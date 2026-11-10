@@ -21,7 +21,6 @@ import java.util.ArrayList;
 
 import java.sql.Connection;
 import com.server.Database;
-import java.util.UUID;
 
 /**
  * Servidor WebSocket que manté l'estat complet dels clients i objectes seleccionables.
@@ -187,14 +186,8 @@ public class Main extends WebSocketServer {
                                     .findFirst()
                                     .orElse(null);
 
-                            String localitzador = UUID.randomUUID()
-                                    .toString()
-                                    .replace("-", "")
-                                    .substring(0, 12)
-                                    .toUpperCase();
-
-                            new ServeiCompres().guardarCompra(
-                                    esdev, nombre, correo, tipusId, localitzador, quantitat);
+                            String localitzador = new ServeiCompres().guardarCompra(
+                                    esdev, nombre, correo, tipusId, "", quantitat);
 
                             JSONObject resultatEntrada = new JSONObject();
                             resultatEntrada.put("esdevenimentId", esdevId);
@@ -213,6 +206,38 @@ public class Main extends WebSocketServer {
                         response.put("message", e.getMessage() != null
                                 ? e.getMessage()
                                 : "Error en processar la reserva.");
+                    }
+
+                    conn.send(response.toString());
+                }
+
+                case "myTickets" -> {
+
+                    JSONObject response = new JSONObject();
+                    response.put("type", "myTickets");
+
+                    try {
+
+                        String correo = obj.optString("correo", "").trim();
+
+                        if (correo.isEmpty()) {
+                            throw new IllegalArgumentException("Falta el correo del comprador.");
+                        }
+
+                        // Recuperar las entradas directamente de SQLite.
+                        JSONArray entrades = new ServeiCompres()
+                                .carregarEntradesComprador(correo);
+
+                        response.put("status", "OK");
+                        response.put("entrades", entrades);
+
+                    } catch (Exception e) {
+
+                        response.put("status", "ERROR");
+                        response.put("message", e.getMessage() != null
+                                ? e.getMessage()
+                                : "Error en recuperar les entrades.");
+
                     }
 
                     conn.send(response.toString());

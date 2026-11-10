@@ -10,11 +10,14 @@ import java.sql.Connection;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.Statement;
+import org.json.JSONArray;
+import org.json.JSONObject;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
+import java.security.SecureRandom;
 
 /**
  * Servei per registrar i consultar les compres reals d'entrades.
@@ -27,7 +30,7 @@ import java.util.Set;
 public class ServeiCompres {
 
     /** Registra una compra: crea la compra, les entrades i marca els seients com a venduts. */
-    public void guardarCompra(Esdeveniment esdev, String nom, String correu,
+    public String guardarCompra(Esdeveniment esdev, String nom, String correu,
                               String tipusId, String localitzador, int quantitat) {
 
         TipusEntrada te = esdev.getTipusEntrades().stream()
@@ -44,6 +47,7 @@ public class ServeiCompres {
 
         try (Connection conn = Database.connect()) {
             conn.setAutoCommit(false);
+            localitzador = generarLocalitzador(conn);
 
             try {
                 LocalDateTime ara = LocalDateTime.now();
@@ -126,6 +130,7 @@ public class ServeiCompres {
                     ? "Error en guardar la compra."
                     : e.getMessage(), e);
         }
+        return localitzador;
     }
 
     /** Carrega les vendes reals d'un esdeveniment (una per entrada venuda). */
@@ -179,6 +184,67 @@ public class ServeiCompres {
 
         return vendes;
     }
+
+    /** Recupera les entrades comprades per un comprador. */
+    public JSONArray carregarEntradesComprador(String correu) {
+
+        JSONArray entrades = new JSONArray();
+
+        String sql =
+                "SELECT es.nom AS esdeveniment, "
+                        + "te.nom AS tipus_entrada, "
+                        + "z.tipus AS tipus_zona, "
+                        + "CASE WHEN z.tipus = 'numerada' THEN s.fila ELSE NULL END AS fila, "
+                        + "CASE WHEN z.tipus = 'numerada' THEN s.numero ELSE NULL END AS numero, "
+                        + "c.comprador_nom AS titular, "
+                        + "e.localitzador "
+                        + "FROM entrades e "
+                        + "JOIN compres c ON c.id = e.compra_id "
+                        + "JOIN tipus_entrada te ON te.id = e.tipus_entrada_id "
+                        + "JOIN esdeveniments es ON es.id = te.esdeveniment_id "
+                        + "JOIN zones z ON z.id = te.zona_id "
+                        + "LEFT JOIN seients s ON s.id = e.seient_id "
+                        + "WHERE LOWER(TRIM(c.comprador_correu)) = LOWER(TRIM(?)) "
+                        + "AND e.estat = 'venuda' "
+                        + "ORDER BY e.data_emissio DESC";
+
+        try (Connection conn = Database.connect();
+            PreparedStatement stmt = conn.prepareStatement(sql)) {
+
+            stmt.setString(1, correu);
+
+            try (ResultSet rs = stmt.executeQuery()) {
+
+                while (rs.next()) {
+
+                    JSONObject entrada = new JSONObject();
+
+                    entrada.put("esdeveniment", rs.getString("esdeveniment"));
+                    entrada.put("tipusEntrada", rs.getString("tipus_entrada"));
+                    entrada.put("tipusZona", rs.getString("tipus_zona"));
+                    entrada.put("titular", rs.getString("titular"));
+                    entrada.put("localitzador", rs.getString("localitzador"));
+
+                    if (rs.getObject("fila") != null) {
+                        entrada.put("fila", rs.getInt("fila"));
+                        entrada.put("numero", rs.getInt("numero"));
+                    } else {
+                        entrada.put("fila", JSONObject.NULL);
+                        entrada.put("numero", JSONObject.NULL);
+                    }
+
+                    entrades.put(entrada);
+                }
+            }
+
+        } catch (Exception e) {
+            throw new RuntimeException(
+                    "Error en recuperar les entrades del comprador.", e);
+        }
+
+        return entrades;
+    }
+
 
     /** Claus (zona-fila-numero) dels seients ja venuts d'un esdeveniment. */
     private Set<String> seientsOcupats(Connection conn, String esdevId) throws Exception {
@@ -236,6 +302,43 @@ public class ServeiCompres {
         }
 
         return candidats;
+    }
+
+    // Generar un localitzador únic de tres números y tres letras
+    private String generarLocalitzador(Connection conn) throws Exception {
+
+        String numeros = "0123456789";
+        String letras = "ABCDEFGHIJKLMNOPQRSTUVWXYZ";
+        SecureRandom random = new SecureRandom();
+
+        String localitzador;
+
+        do {
+            StringBuilder resultat = new StringBuilder();
+
+            for (int i = 0; i < 3; i++) {
+                resultat.append(numeros.charAt(random.nextInt(numeros.length())));
+            }
+
+            for (int i = 0; i < 3; i++) {
+                resultat.append(letras.charAt(random.nextInt(letras.length())));
+            }
+
+            localitzador = resultat.toString();
+
+            try (PreparedStatement stmt = conn.prepareStatement(
+                    "SELECT 1 FROM entrades WHERE localitzador = ? LIMIT 1")) {
+
+                stmt.setString(1, localitzador);
+
+                try (ResultSet rs = stmt.executeQuery()) {
+                    if (!rs.next()) {
+                        return localitzador;
+                    }
+                }
+            }
+
+        } while (true);
     }
 
     /** Genera un codi de compra unic (V + nanosegons). */
