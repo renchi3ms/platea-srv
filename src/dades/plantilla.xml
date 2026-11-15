@@ -1,0 +1,153 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<cataleg>
+  <!-- Recintes amb les seves zones -->
+  <recintes>
+    <recinte id="R1" nom="Sala Petita">
+      <zona id="Z1" nom="Platea" tipus="numerada" aforament="60"/>
+      <zona id="Z2" nom="Dempeus" tipus="general" aforament="40"/>
+    </recinte>
+    <recinte id="R2" nom="Teatre Principal">
+      <zona id="Z3" nom="Platea Central" tipus="numerada" aforament="300"/>
+      <zona id="Z4" nom="Anfiteatre" tipus="numerada" aforament="150"/>
+      <zona id="Z5" nom="Loft General" tipus="general" aforament="50"/>
+    </recinte>
+    <recinte id="R3" nom="Espai Exterior">
+      <zona id="Z6" nom="Pista Gran" tipus="general" aforament="1000"/>
+      <zona id="Z7" nom="Zona VIP" tipus="numerada" aforament="100"/>
+    </recinte>
+  </recintes>
+
+  <esdeveniments>
+    <!-- Esdeveniment 1 -->
+    <esdeveniment id="E1" recinte="R1">
+      <nom>Coses que no es diuen en un sopar</nom>
+      <dataHora>2026-11-21T21:30</dataHora>
+      <categoria>Monòleg</categoria>
+      <descripcio>Una hora d'humor sobre les converses incòmodes de cada dia.</descripcio>
+      <imatge>monoleg-sopar.jpg</imatge>
+      <tipusEntrades>
+        <tipusEntrada id="T1" nom="Platea" zona="Z1" preu="18.00" quota="50"/>
+        <tipusEntrada id="T2" nom="Platea reduïda" zona="Z1" preu="14.00" quota="10"/>
+        <tipusEntrada id="T3" nom="Dempeus" zona="Z2" preu="12.00" quota="40"/>
+      </tipusEntrades>
+    </esdeveniment>
+
+    <!-- Esdeveniment 2 -->
+    <esdeveniment id="E2" recinte="R2">
+      <nom>Sinfonia d'Ocells i Tardor</nom>
+      <dataHora>2026-11-25T19:00</dataHora>
+      <categoria>Concert de Música Clàssica</categoria>
+      <descripcio>Interpretació magistral per l'orquestra simfònica local.</descripcio>
+      <imatge>simfonia-tardor.jpg</imatge>
+      <tipusEntrades>
+        <tipusEntrada id="T4" nom="Platea Central" zona="Z3" preu="35.00" quota="250"/>
+        <tipusEntrada id="T5" nom="Anfiteatre General" zona="Z4" preu="22.50" quota="100"/>
+      </tipusEntrades>
+    </esdeveniment>
+
+    <!-- Esdeveniment 3 -->
+    <esdeveniment id="E3" recinte="R3">
+      <nom>Festival d'Hivern 2026</nom>
+      <dataHora>2026-12-05T18:00</dataHora>
+      <categoria>Festival de Música Espai Obert</categoria>
+      <descripcio>Més de 5 hores de música en directe amb artistes internacionals.</descripcio>
+      <imatge>festival-hivern.jpg</imatge>
+      <tipusEntrades>
+        <tipusEntrada id="T6" nom="General Pista" zona="Z6" preu="45.00" quota="800"/>
+        <tipusEntrada id="T7" nom="Passada VIP" zona="Z7" preu="95.00" quota="80"/>
+      </tipusEntrades>
+    </esdeveniment>
+
+    <!-- Esdeveniment 4 -->
+    <esdeveniment id="E4" recinte="R2">
+      <nom>L'Èpica Diumenge a la Tarda</nom>
+      <dataHora>2026-12-13T17:00</dataHora>
+      <categoria>Teatre Drama</categoria>
+      <descripcio>Una adaptació moderna del clàssic teatral del segle XX.</descripcio>
+      <imatge>teatre-drama.jpg</imatge>
+      <tipusEntrades>
+        <tipusEntrada id="T8" nom="Platea Preferent" zona="Z3" preu="28.00" quota="200"/>
+        <tipusEntrada id="T9" nom="Anfiteatre Promoció" zona="Z4" preu="15.00" quota="50"/>
+      </tipusEntrades>
+    </esdeveniment>
+
+    <!-- Esdeveniment 5 -->
+    <esdeveniment id="E5" recinte="R1">
+      <nom>Magia i Il·lusions de Proximitat</nom>
+      <dataHora>2026-12-18T20:00</dataHora>
+      <categoria>Espectacle de Màgia</categoria>
+      <descripcio>Trucs de màgia de prop on el públic és el gran protagonista.</descripcio>
+      <imatge>magia-prop.jpg</imatge>
+      <tipusEntrades>
+        <tipusEntrada id="T10" nom="Platea Frontal" zona="Z1" preu="20.00" quota="60"/>
+        <tipusEntrada id="T11" nom="Zona Peus" zona="Z2" preu="10.00" quota="30"/>
+      </tipusEntrades>
+    </esdeveniment>
+
+    <!-- Esdeveniment 6 -->
+    <esdeveniment id="E6" recinte="R2">
+      <nom>Gala de Dansa Contemporània</nom>
+      <dataHora>2027-01-10T19:30</dataHora>
+      <categoria>Dansa</categoria>
+      <descripcio>Coreografies innovadores i moviment expressiu a càrrec de la companyia jove.</descripcio>
+      <imatge>dansa-gala.jpg</imatge>
+      <tipusEntrades>
+        <tipusEntrada id="T12" nom="Platea Baixa" zona="Z3" preu="25.00" quota="150"/>
+        <tipusEntrada id="T13" nom="Anfiteatre Alt" zona="Z4" preu="18.00" quota="100"/>
+      </tipusEntrades>
+    </esdeveniment>
+
+    <!-- Esdeveniment 7 -->
+    <esdeveniment id="E7" recinte="R1">
+      <nom>Microteatre de Nits d'Estiu</nom>
+      <dataHora>2027-01-22T22:00</dataHora>
+      <categoria>Microteatre</categoria>
+      <descripcio>Tres obres curtes de 15 minuts en una sola sessió íntima.</descripcio>
+      <imatge>microteatre.jpg</imatge>
+      <tipusEntrades>
+        <tipusEntrada id="T14" nom="Sessió Completa" zona="Z1" preu="16.00" quota="40"/>
+        <tipusEntrada id="T15" nom="Sessió Estudiant" zona="Z2" preu="10.00" quota="20"/>
+      </tipusEntrades>
+    </esdeveniment>
+
+    <!-- Esdeveniment 8 -->
+    <esdeveniment id="E8" recinte="R3">
+      <nom>Nits de Jazz sota les Estrelles</nom>
+      <dataHora>2027-02-14T21:00</dataHora>
+      <categoria>Concert de Jazz</categoria>
+      <descripcio>Un trio de jazz internacional ambientant la nit de Sant Valentí.</descripcio>
+      <imatge>jazz-estrelles.jpg</imatge>
+      <tipusEntrades>
+        <tipusEntrada id="T16" nom="Entrada General amb Copa" zona="Z6" preu="30.00" quota="500"/>
+        <tipusEntrada id="T17" nom="Taula VIP Parella" zona="Z7" preu="80.00" quota="40"/>
+      </tipusEntrades>
+    </esdeveniment>
+
+    <!-- Esdeveniment 9 -->
+    <esdeveniment id="E9" recinte="R2">
+      <nom>Comèdia Improvisada: Quin Disbarat!</nom>
+      <dataHora>2027-02-27T20:30</dataHora>
+      <categoria>Improvisació / Humour</categoria>
+      <descripcio>Un xou d'improvisació totalment basat en els suggeriments del públic.</descripcio>
+      <imatge>impro-disbarat.jpg</imatge>
+      <tipusEntrades>
+        <tipusEntrada id="T18" nom="Platea Principal" zona="Z3" preu="20.00" quota="280"/>
+        <tipusEntrada id="T19" nom="Loft Promocional" zona="Z5" preu="12.00" quota="40"/>
+      </tipusEntrades>
+    </esdeveniment>
+
+    <!-- Esdeveniment 10 -->
+    <esdeveniment id="E10" recinte="R1">
+      <nom>Recital de Poesia Urbana i Slam</nom>
+      <dataHora>2027-03-05T19:00</dataHora>
+      <categoria>Poesia / Slam</categoria>
+      <descripcio>Competició poètica participativa amb micro obert i jurat del públic.</descripcio>
+      <imatge>slam-poesia.jpg</imatge>
+      <tipusEntrades>
+        <tipusEntrada id="T20" nom="Platea Única" zona="Z1" preu="8.00" quota="50"/>
+        <tipusEntrada id="T21" nom="Participant/Dempeus" zona="Z2" preu="5.00" quota="30"/>
+      </tipusEntrades>
+    </esdeveniment>
+  </esdeveniments>
+</cataleg>
+ 
