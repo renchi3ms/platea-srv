@@ -91,7 +91,7 @@ public class ServeiMapa {
                 Venda venda = vendesPerSeient.get(s.getKey());
 
                 if (venda != null) {
-                    s.setEstat("venut");
+                    s.setEstat("V");
                     s.setVendaRef(venda.getCodi());
                 }
             }

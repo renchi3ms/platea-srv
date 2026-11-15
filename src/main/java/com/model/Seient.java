@@ -9,19 +9,19 @@ public class Seient {
     private String zonaId;
     private int fila;
     private int numero;
-    private String estat; // "lliure" | "venut"
+    private String estat; // "L" | "V"
     private String vendaRef; // codi de la venda associada, o null si és lliure
 
     public Seient(String zonaId, int fila, int numero) {
         this.zonaId = zonaId;
         this.fila = fila;
         this.numero = numero;
-        this.estat = "lliure";
+        this.estat = "L";
         this.vendaRef = null;
     }
 
     public boolean estaVengut() {
-        return "venut".equals(estat);
+        return "V".equals(estat);
     }
 
     public String getZonaId() {

@@ -83,7 +83,7 @@ public class ServeiCompres {
 
                 try (PreparedStatement stmtSeient = conn.prepareStatement(
                         "INSERT INTO seients(zona_id, fila, numero, estat, venda_ref, esdeveniment_id) "
-                                + "VALUES (?, ?, ?, 'venut', ?, ?)",
+                                + "VALUES (?, ?, ?, 'V', ?, ?)",
                         Statement.RETURN_GENERATED_KEYS);
                      PreparedStatement stmtEntrada = conn.prepareStatement(
                              "INSERT INTO entrades(localitzador, tipus_entrada_id, seient_id, compra_id, "
@@ -161,7 +161,7 @@ public class ServeiCompres {
                             rs.getInt("fila"),
                             rs.getInt("numero"));
 
-                    seient.setEstat("venut");
+                    seient.setEstat("V");
                     seient.setVendaRef(rs.getString("codi"));
 
                     Venda venda = new Venda(
@@ -253,7 +253,7 @@ public class ServeiCompres {
 
         try (PreparedStatement stmt = conn.prepareStatement(
                 "SELECT zona_id, fila, numero FROM seients "
-                        + "WHERE esdeveniment_id = ? AND estat = 'venut'")) {
+                        + "WHERE esdeveniment_id = ? AND estat = 'V'")) {
 
             stmt.setString(1, esdevId);
 
