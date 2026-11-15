@@ -31,7 +31,7 @@ public class ServeiCompres {
 
     /** Registra una compra: crea la compra, les entrades i marca els seients com a venduts. */
     public String guardarCompra(Esdeveniment esdev, String nom, String correu,
-                              String tipusId, String localitzador, int quantitat) {
+                              String tipusId, String localitzador, int quantitat, List<int[]> seients) {
 
         TipusEntrada te = esdev.getTipusEntrades().stream()
                 .filter(t -> t.getId().equals(tipusId))
@@ -75,10 +75,24 @@ public class ServeiCompres {
                 }
 
                 Set<String> ocupats = seientsOcupats(conn, esdev.getId());
-                ArrayList<int[]> candidats = nousSeients(esdev, zonaId, general, ocupats, quantitat);
+                ArrayList<int[]> candidats;
 
-                if (candidats.size() < quantitat) {
-                    throw new IllegalStateException("No qu prou seients lliures a la zona " + zonaId + ".");
+                if (general) {
+                    // General: se siguen auto-asignando los primeros libres
+                    candidats = nousSeients(esdev, zonaId, true, ocupats, quantitat);
+                    if (candidats.size() < quantitat) {
+                        throw new IllegalStateException("No qu prou seients lliures a la zona " + zonaId + ".");
+                    }
+                } else {
+                    // Numerada: se reservan LOS asientos pedidos por el usuario
+                    candidats = new ArrayList<>();
+                    for (int[] s : seients) {
+                        String key = zonaId + "-" + s[0] + "-" + s[1];
+                        if (ocupats.contains(key)) {
+                            throw new IllegalStateException("El seient " + key + " ja està ocupat.");
+                        }
+                        candidats.add(s);
+                    }
                 }
 
                 try (PreparedStatement stmtSeient = conn.prepareStatement(

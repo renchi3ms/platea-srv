@@ -17,7 +17,7 @@ import com.model.Venda;
 
 import java.net.InetSocketAddress;
 import java.util.ArrayList;
-
+import java.util.List;
 import java.sql.Connection;
 import com.server.Database;
 
@@ -164,12 +164,6 @@ public class Main extends WebSocketServer {
                             if (tipusEntrada == null) {
                                 throw new IllegalArgumentException("Tipus d'entrada no trobat: " + tipusId);
                             }
-
-                            if (!"general".equalsIgnoreCase(tipusEntrada.getZona().getTipus())) {
-                                throw new IllegalArgumentException(
-                                        "Només es poden comprar entrades generals."
-                                );
-                            }
                         }
 
                         // Crear y guardar las reservas.
@@ -179,14 +173,23 @@ public class Main extends WebSocketServer {
                             String esdevId = entradaJSON.getString("esdevenimentId");
                             String tipusId = entradaJSON.getString("tipusEntradaId");
                             int quantitat = entradaJSON.getInt("quantitat");
+                            JSONArray seientsJSON = entradaJSON.optJSONArray("seients");
 
                             Esdeveniment esdev = cataleg.getEsdeveniments().stream()
                                     .filter(e -> e.getId().equals(esdevId))
                                     .findFirst()
                                     .orElse(null);
+                            
+                            List<int[]> seients = new ArrayList<>();
+                            if (seientsJSON != null) {
+                                for (int j = 0; j < seientsJSON.length(); j++) {
+                                    JSONArray parella = seientsJSON.getJSONArray(j);
+                                    seients.add(new int[]{ parella.getInt(0), parella.getInt(1) });
+                                }
+                            }
 
                             String localitzador = new ServeiCompres().guardarCompra(
-                                    esdev, nombre, correo, tipusId, "", quantitat);
+                                    esdev, nombre, correo, tipusId, "", quantitat, seients);
 
                             JSONObject resultatEntrada = new JSONObject();
                             resultatEntrada.put("esdevenimentId", esdevId);
