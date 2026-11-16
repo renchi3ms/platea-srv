@@ -53,6 +53,7 @@ public class Main extends Application {
             System.out.println("2. bounce");
             System.out.println("3. esdev");
             System.out.println("4. purchase");
+            System.out.println("5. mapa");
             System.out.println("0. sortir");
             System.out.print("Tria una opcio: ");
             String option = scanner.nextLine().trim();
@@ -69,6 +70,9 @@ public class Main extends Application {
                     break;
                 case "4":
                     sendPurchase(scanner);
+                    break;
+                case "5":
+                    sendMapa(scanner);
                     break;
                 case "0":
                     System.out.println("Bye!");
@@ -160,6 +164,29 @@ public class Main extends Application {
         }
     }
 
+    private static void sendMapa(Scanner scanner) {
+        System.out.print("ID de l'esdeveniment: ");
+        String esdevenimentId = scanner.nextLine().trim();
+        JSONObject msg = new JSONObject();
+        msg.put("type", "mapa");
+        msg.put("esdev", esdevenimentId);
+        
+        inbox.clear();
+        wsClient.safeSend(msg.toString());
+
+        try {
+            String response = inbox.poll(5, TimeUnit.SECONDS);
+
+            if (response != null) {
+                printMessage(response);
+            } else {
+                System.out.println("Sense resposta del servidor.");
+            }
+        } catch (InterruptedException e) {
+            Thread.currentThread().interrupt();
+        }
+    }
+
     @Override
     public void stop() { 
         if (wsClient != null) {
@@ -168,7 +195,7 @@ public class Main extends Application {
     }
 
     public static void connectToServer() {
-        wsClient = UtilsWS.getSharedInstance("ws://localhost:3000");
+        wsClient = UtilsWS.getSharedInstance("wss://platea4.ieti.site:443");
 
         wsClient.onOpen((response) -> {
         });
@@ -266,6 +293,62 @@ public class Main extends Application {
                             + msgObj.optString("message", "Error desconegut."));
                 }
                 break;
+            }
+            case "mapa": {
+                if (msgObj.has("error")) {
+                    System.out.println("Error mapa: " + msgObj.optString("error"));
+                    return;
+                }
+
+                int files = msgObj.optInt("files", 0);
+                int columnes = msgObj.optInt("columnes", 0);
+                JSONArray matriu = msgObj.optJSONArray("matriu");
+
+                if (matriu == null) {
+                    System.out.println("Mapa sense dades vàlides.");
+                    return;
+                }
+
+                System.out.println("\n\nEsquema Mapa: \n");
+
+                for (int f = 0; f < files; f++) {
+                    for (int c = 0; c < columnes; c++) {
+                        JSONArray celda = matriu.getJSONArray(f).optJSONArray(c);
+
+                        if (celda != null) {
+                            if (celda.getString(3).equals("V")) {
+                                System.out.print("X");
+                            } else {
+                                System.out.print("O");
+                            }
+                        } else {
+                            System.out.print(" ");
+                        }
+                    }
+                    System.out.println();
+                }
+
+                System.out.println("\n\nDatos entradas compradas: \n");
+
+                for (int f = 0; f < files; f++) {
+                    for (int c = 0; c < columnes; c++) {
+                        JSONArray celda = matriu.getJSONArray(f).optJSONArray(c);
+
+                        if (celda != null && celda.getString(3).equals("V")) {
+                            String venta = "";
+                            venta += "Zona: " + celda.getString(0) + " | ";
+                            venta += "Fila: " + celda.getInt(1) + " | ";
+                            venta += "Numero Asiento: " + celda.getInt(2) + " | ";
+                            venta += "Codigo: " + celda.getString(4) + " | ";
+                            venta += "Comprador: " + celda.getString(5) + " | ";
+                            venta += "Correo: " + celda.getString(6) + " | ";
+                            venta += "Fecha compra: " + celda.getString(7) + " | ";
+                            venta += "Precio: " + celda.getDouble(8) + " | ";
+                            System.out.println(venta);
+                        }
+                    }
+                    
+                }
             }
         }
     }

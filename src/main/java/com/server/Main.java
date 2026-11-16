@@ -9,20 +9,17 @@ import org.json.JSONObject;
 
 import com.model.Cataleg;
 import com.model.Esdeveniment;
-import com.model.Recinte;
+import com.model.MapaResultat;
+import com.model.MatriuSeients;
+import com.model.Seient;
 import com.model.TipusEntrada;
+import com.model.Venda;
 
 import java.net.InetSocketAddress;
 import java.util.ArrayList;
-
+import java.util.List;
 import java.sql.Connection;
 import com.server.Database;
-import java.io.IOException;
-import java.nio.file.Files;
-import java.nio.file.Path;
-import java.nio.file.Paths;
-import java.time.LocalDateTime;
-import java.util.UUID;
 
 /**
  * Servidor WebSocket que manté l'estat complet dels clients i objectes seleccionables.
@@ -40,7 +37,6 @@ public class Main extends WebSocketServer {
     private static final String K_TYPE = "type";
     private static final String K_VALUE = "value";
     private static final String K_RECINTE = "recinte";
-    private static final String FITXER_XML = "assets/plantilla.xml";
     private static final String K_ESDEVENIMENTS = "esdeveniments";
 
     private static final String K_ESDEV_ID = "id";
@@ -136,7 +132,7 @@ public class Main extends WebSocketServer {
                             throw new IllegalArgumentException("Falten dades de la compra.");
                         }
 
-                        Cataleg cataleg = new ServeiXML().carregarCataleg(FITXER_XML);
+                        Cataleg cataleg = new ServeiSQLite().carregarCataleg();
                         JSONArray localitzadors = new JSONArray();
 
                         // Validar todas las entradas antes de guardar la reserva.
@@ -168,12 +164,6 @@ public class Main extends WebSocketServer {
                             if (tipusEntrada == null) {
                                 throw new IllegalArgumentException("Tipus d'entrada no trobat: " + tipusId);
                             }
-
-                            if (!"general".equalsIgnoreCase(tipusEntrada.getZona().getTipus())) {
-                                throw new IllegalArgumentException(
-                                        "Només es poden comprar entrades generals."
-                                );
-                            }
                         }
 
                         // Crear y guardar las reservas.
@@ -183,21 +173,23 @@ public class Main extends WebSocketServer {
                             String esdevId = entradaJSON.getString("esdevenimentId");
                             String tipusId = entradaJSON.getString("tipusEntradaId");
                             int quantitat = entradaJSON.getInt("quantitat");
+                            JSONArray seientsJSON = entradaJSON.optJSONArray("seients");
 
-                            String localitzador = UUID.randomUUID()
-                                    .toString()
-                                    .replace("-", "")
-                                    .substring(0, 12)
-                                    .toUpperCase();
+                            Esdeveniment esdev = cataleg.getEsdeveniments().stream()
+                                    .filter(e -> e.getId().equals(esdevId))
+                                    .findFirst()
+                                    .orElse(null);
+                            
+                            List<int[]> seients = new ArrayList<>();
+                            if (seientsJSON != null) {
+                                for (int j = 0; j < seientsJSON.length(); j++) {
+                                    JSONArray parella = seientsJSON.getJSONArray(j);
+                                    seients.add(new int[]{ parella.getInt(0), parella.getInt(1) });
+                                }
+                            }
 
-                            JSONObject reserva = new JSONObject();
-                            reserva.put("tipusEntrada", tipusId);
-                            reserva.put("localitzador", localitzador);
-                            reserva.put("nom", nombre);
-                            reserva.put("correu", correo);
-                            reserva.put("quantitat", quantitat);
-
-                            guardarReserva(esdevId, reserva);
+                            String localitzador = new ServeiCompres().guardarCompra(
+                                    esdev, nombre, correo, tipusId, "", quantitat, seients);
 
                             JSONObject resultatEntrada = new JSONObject();
                             resultatEntrada.put("esdevenimentId", esdevId);
@@ -221,11 +213,43 @@ public class Main extends WebSocketServer {
                     conn.send(response.toString());
                 }
 
+                case "myTickets" -> {
+
+                    JSONObject response = new JSONObject();
+                    response.put("type", "myTickets");
+
+                    try {
+
+                        String correo = obj.optString("correo", "").trim();
+
+                        if (correo.isEmpty()) {
+                            throw new IllegalArgumentException("Falta el correo del comprador.");
+                        }
+
+                        // Recuperar las entradas directamente de SQLite.
+                        JSONArray entrades = new ServeiCompres()
+                                .carregarEntradesComprador(correo);
+
+                        response.put("status", "OK");
+                        response.put("entrades", entrades);
+
+                    } catch (Exception e) {
+
+                        response.put("status", "ERROR");
+                        response.put("message", e.getMessage() != null
+                                ? e.getMessage()
+                                : "Error en recuperar les entrades.");
+
+                    }
+
+                    conn.send(response.toString());
+                }
+
                 case "mapa" -> {
                     JSONObject response = new JSONObject();
                     response.put(K_TYPE, "mapa");
 
-                    Cataleg cataleg = new ServeiXML().carregarCataleg(FITXER_XML);
+                    Cataleg cataleg = new ServeiSQLite().carregarCataleg();
                     String esdevId = obj.getString("esdev");
 
                     Esdeveniment esdev = cataleg.getEsdeveniments().stream()
@@ -235,6 +259,12 @@ public class Main extends WebSocketServer {
 
                     if (esdev == null) {
                         response.put("error", "Esdev not found");
+                        conn.send(response.toString());
+                        break;
+                    }
+
+                    if (esdev.getRecinte().getPlantilla() == null) {
+                        response.put("error", "Mapa no disponible");
                         conn.send(response.toString());
                         break;
                     }
@@ -285,12 +315,15 @@ public class Main extends WebSocketServer {
 
         DatabaseInitializer.initialize();
         try {
-            ServeiXML serveiXML = new ServeiXML();
-
-            Cataleg cataleg = serveiXML.carregarCataleg("assets/plantilla.xml");
             ServeiSQLite serveiSQLite = new ServeiSQLite();
 
-            serveiSQLite.guardarCataleg(cataleg);
+            if (serveiSQLite.estaBuida()) {
+                ServeiXML serveiXML = new ServeiXML();
+
+                Cataleg cataleg = serveiXML.carregarCataleg("assets/plantilla.xml");
+
+                serveiSQLite.guardarCataleg(cataleg);
+            }
 
         } catch (Exception e) {
            e.printStackTrace();
@@ -299,27 +332,6 @@ public class Main extends WebSocketServer {
         server.start();
 
         System.out.println("Server running on port " + DEFAULT_PORT + "zss Ctrl+C to stop it.");
-    }
-    private static void guardarReserva(String esdevId, JSONObject reserva)
-        throws IOException {
-
-        Path carpeta = Paths.get("data");
-        Files.createDirectories(carpeta);
-
-        Path archivo = carpeta.resolve(esdevId + ".json");
-
-        JSONArray reservas;
-
-        if (Files.exists(archivo)) {
-            String contenido = Files.readString(archivo);
-            reservas = new JSONArray(contenido);
-        } else {
-            reservas = new JSONArray();
-        }
-
-        reservas.put(reserva);
-
-        Files.writeString(archivo, reservas.toString(4));
     }
 
     private static JSONObject getEsdevResponse(ArrayList<Esdeveniment> esdeveniments, JSONObject response) {
@@ -355,6 +367,61 @@ public class Main extends WebSocketServer {
         }
 
         response.put(K_ESDEVENIMENTS, esdevsJSON);
+        return response;
+    }
+
+    private static JSONObject getMapaResponse(Esdeveniment esdev, MapaResultat resultat, JSONObject response) {
+
+        MatriuSeients mapa = resultat.getMatriu();
+
+        response.put("esdev", esdev.getId());
+        response.put("files", mapa.getFiles());
+        response.put("columnes", mapa.getColumnes());
+
+        JSONArray matriuJSON = new JSONArray();
+
+        for (int f = 0; f < mapa.getFiles(); f++) {
+
+            JSONArray filaJSON = new JSONArray();
+
+            for (int c = 0; c < mapa.getColumnes(); c++) {
+
+                Seient s = mapa.get(f, c);
+
+                if (s == null) {
+                    filaJSON.put(JSONObject.NULL);
+                } else {
+
+                    JSONArray celda = new JSONArray();
+                    celda.put(s.getZonaId());
+                    celda.put(s.getFila());
+                    celda.put(s.getNumero());
+
+                    if (s.estaVengut()) {
+
+                        Venda v = resultat.getVendes().get(s.getVendaRef());
+
+                        celda.put("V");
+
+                        if (v != null) {
+                            celda.put(v.getCodi());
+                            celda.put(v.getCompradorNom());
+                            celda.put(v.getCompradorCorreu());
+                            celda.put(v.getDataCompra().toString());
+                            celda.put(v.getPreuPagat());
+                        }
+                    } else {
+                        celda.put("L");
+                    }
+
+                    filaJSON.put(celda);
+                }
+            }
+
+            matriuJSON.put(filaJSON);
+        }
+
+        response.put("matriu", matriuJSON);
         return response;
     }
 

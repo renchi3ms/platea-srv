@@ -38,10 +38,11 @@ public class DatabaseInitializer {
                     zona_id TEXT NOT NULL,
                     fila INTEGER NOT NULL,
                     numero INTEGER NOT NULL,
-                    estat TEXT NOT NULL DEFAULT 'lliure',
+                    estat TEXT NOT NULL DEFAULT 'L',
                     venda_ref TEXT,
+                    esdeveniment_id TEXT NOT NULL,
                     FOREIGN KEY (zona_id) REFERENCES zones(id),
-                    UNIQUE(zona_id, fila, numero)
+                    UNIQUE(esdeveniment_id, zona_id, fila, numero)
                 )
             """);
 
