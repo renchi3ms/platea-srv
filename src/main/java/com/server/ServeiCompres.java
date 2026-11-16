@@ -29,9 +29,13 @@ import java.security.SecureRandom;
  */
 public class ServeiCompres {
 
-    /** Registra una compra: crea la compra, les entrades i marca els seients com a venduts. */
-    public String guardarCompra(Esdeveniment esdev, String nom, String correu,
-                              String tipusId, String localitzador, int quantitat, List<int[]> seients) {
+    /**
+     * Registra una compra: crea la compra, les entrades i marca els seients com a venduts.
+     * Rebre la Connection del caller: NO fa commit ni rollback, la transacció
+     * completa de la cistella es confirma o es desfà des de Main.
+     */
+    public String guardarCompra(Connection conn, Esdeveniment esdev, String nom, String correu,
+                              String tipusId, String localitzador, int quantitat, List<int[]> seients) throws Exception {
 
         TipusEntrada te = esdev.getTipusEntrades().stream()
                 .filter(t -> t.getId().equals(tipusId))
@@ -44,106 +48,104 @@ public class ServeiCompres {
 
         String zonaId = te.getZona().getId();
         boolean general = "general".equalsIgnoreCase(te.getZona().getTipus());
-
-        try (Connection conn = Database.connect()) {
-            conn.setAutoCommit(false);
-            localitzador = generarLocalitzador(conn);
-
-            try {
-                LocalDateTime ara = LocalDateTime.now();
-                String codi = generarCodi(conn);
-
-                long compraId;
-
-                try (PreparedStatement stmt = conn.prepareStatement(
-                        "INSERT INTO compres(codi, comprador_nom, comprador_correu, data_compra) "
-                                + "VALUES (?, ?, ?, ?)",
-                        Statement.RETURN_GENERATED_KEYS)) {
-
-                    stmt.setString(1, codi);
-                    stmt.setString(2, nom);
-                    stmt.setString(3, correu);
-                    stmt.setString(4, ara.toString());
-                    stmt.executeUpdate();
-
-                    try (ResultSet rs = stmt.getGeneratedKeys()) {
-                        if (!rs.next()) {
-                            throw new IllegalStateException("No s'ha pogut crear la compra.");
-                        }
-                        compraId = rs.getLong(1);
-                    }
-                }
-
-                Set<String> ocupats = seientsOcupats(conn, esdev.getId());
-                ArrayList<int[]> candidats;
-
-                if (general) {
-                    // General: se siguen auto-asignando los primeros libres
-                    candidats = nousSeients(esdev, zonaId, true, ocupats, quantitat);
-                    if (candidats.size() < quantitat) {
-                        throw new IllegalStateException("No qu prou seients lliures a la zona " + zonaId + ".");
-                    }
-                } else {
-                    // Numerada: se reservan LOS asientos pedidos por el usuario
-                    candidats = new ArrayList<>();
-                    for (int[] s : seients) {
-                        String key = zonaId + "-" + s[0] + "-" + s[1];
-                        if (ocupats.contains(key)) {
-                            throw new IllegalStateException("El seient " + key + " ja està ocupat.");
-                        }
-                        candidats.add(s);
-                    }
-                }
-
-                try (PreparedStatement stmtSeient = conn.prepareStatement(
-                        "INSERT INTO seients(zona_id, fila, numero, estat, venda_ref, esdeveniment_id) "
-                                + "VALUES (?, ?, ?, 'V', ?, ?)",
-                        Statement.RETURN_GENERATED_KEYS);
-                     PreparedStatement stmtEntrada = conn.prepareStatement(
-                             "INSERT INTO entrades(localitzador, tipus_entrada_id, seient_id, compra_id, "
-                                     + "preu_pagat, data_emissio, estat) VALUES (?, ?, ?, ?, ?, ?, 'venuda')")) {
-
-                    for (int i = 0; i < quantitat; i++) {
-
-                        int[] seient = candidats.get(i);
-
-                        stmtSeient.setString(1, zonaId);
-                        stmtSeient.setInt(2, seient[0]);
-                        stmtSeient.setInt(3, seient[1]);
-                        stmtSeient.setString(4, codi);
-                        stmtSeient.setString(5, esdev.getId());
-                        stmtSeient.executeUpdate();
-
-                        long seientId;
-
-                        try (ResultSet rs = stmtSeient.getGeneratedKeys()) {
-                            if (!rs.next()) {
-                                throw new IllegalStateException("No s'ha pogut reservar el seient.");
-                            }
-                            seientId = rs.getLong(1);
-                        }
-
-                        stmtEntrada.setString(1, i == 0 ? localitzador : localitzador + "-" + (i + 1));
-                        stmtEntrada.setString(2, tipusId);
-                        stmtEntrada.setLong(3, seientId);
-                        stmtEntrada.setLong(4, compraId);
-                        stmtEntrada.setDouble(5, te.getPreu());
-                        stmtEntrada.setString(6, ara.toString());
-                        stmtEntrada.executeUpdate();
-                    }
-                }
-
-                conn.commit();
-
-            } catch (Exception e) {
-                conn.rollback();
-                throw e;
-            }
-        } catch (Exception e) {
-            throw new RuntimeException(e.getMessage() == null
-                    ? "Error en guardar la compra."
-                    : e.getMessage(), e);
+        
+        int vendudes = quantsVenuts(conn, tipusId);
+        if (vendudes + quantitat > te.getQuota()) {
+            throw new IllegalStateException("Quota superada per a l'entrada " + te.getNom()
+                    + " (quota: " + te.getQuota() + ").");
         }
+
+        localitzador = generarLocalitzador(conn);
+
+        LocalDateTime ara = LocalDateTime.now();
+        String codi = generarCodi(conn);
+
+        long compraId;
+
+        try (PreparedStatement stmt = conn.prepareStatement(
+                "INSERT INTO compres(codi, comprador_nom, comprador_correu, data_compra) "
+                        + "VALUES (?, ?, ?, ?)",
+                Statement.RETURN_GENERATED_KEYS)) {
+
+            stmt.setString(1, codi);
+            stmt.setString(2, nom);
+            stmt.setString(3, correu);
+            stmt.setString(4, ara.toString());
+            stmt.executeUpdate();
+
+            try (ResultSet rs = stmt.getGeneratedKeys()) {
+                if (!rs.next()) {
+                    throw new IllegalStateException("No s'ha pogut crear la compra.");
+                }
+                compraId = rs.getLong(1);
+            }
+        }
+
+        Set<String> ocupats = seientsOcupats(conn, esdev.getId());
+        ArrayList<int[]> candidats;
+
+        if (general) {
+            // General: se siguen auto-asignando los primeros libres
+            candidats = nousSeients(esdev, zonaId, true, ocupats, quantitat);
+            if (candidats.size() < quantitat) {
+                throw new IllegalStateException("No qu prou seients lliures a la zona " + zonaId + ".");
+            }
+        } else {
+            candidats = new ArrayList<>();
+            ArrayList<String> fallits = new ArrayList<>();
+
+            for (int[] s : seients) {
+                String key = zonaId + "-" + s[0] + "-" + s[1];
+                if (ocupats.contains(key)) {
+                    fallits.add(key);
+                } else {
+                    candidats.add(s);
+                }
+            }
+
+            if (!fallits.isEmpty()) {
+                throw new SeientsOcupatsException(fallits);
+            }
+        }
+
+        try (PreparedStatement stmtSeient = conn.prepareStatement(
+                "INSERT INTO seients(zona_id, fila, numero, estat, venda_ref, esdeveniment_id) "
+                        + "VALUES (?, ?, ?, 'V', ?, ?)",
+                Statement.RETURN_GENERATED_KEYS);
+             PreparedStatement stmtEntrada = conn.prepareStatement(
+                     "INSERT INTO entrades(localitzador, tipus_entrada_id, seient_id, compra_id, "
+                             + "preu_pagat, data_emissio, estat) VALUES (?, ?, ?, ?, ?, ?, 'venuda')")) {
+
+            for (int i = 0; i < quantitat; i++) {
+
+                int[] seient = candidats.get(i);
+
+                stmtSeient.setString(1, zonaId);
+                stmtSeient.setInt(2, seient[0]);
+                stmtSeient.setInt(3, seient[1]);
+                stmtSeient.setString(4, codi);
+                stmtSeient.setString(5, esdev.getId());
+                stmtSeient.executeUpdate();
+
+                long seientId;
+
+                try (ResultSet rs = stmtSeient.getGeneratedKeys()) {
+                    if (!rs.next()) {
+                        throw new IllegalStateException("No s'ha pogut reservar el seient.");
+                    }
+                    seientId = rs.getLong(1);
+                }
+
+                stmtEntrada.setString(1, i == 0 ? localitzador : localitzador + "-" + (i + 1));
+                stmtEntrada.setString(2, tipusId);
+                stmtEntrada.setLong(3, seientId);
+                stmtEntrada.setLong(4, compraId);
+                stmtEntrada.setDouble(5, te.getPreu());
+                stmtEntrada.setString(6, ara.toString());
+                stmtEntrada.executeUpdate();
+            }
+        }
+
         return localitzador;
     }
 
@@ -368,5 +370,21 @@ public class ServeiCompres {
         }
 
         throw new IllegalStateException("No s'ha pogut generar el codi de compra.");
+    }
+
+    /** Retorna quantes entrades queden disponibles */
+
+    private int quantsVenuts(Connection conn, String tipusId) throws Exception {
+
+        try (PreparedStatement stmt = conn.prepareStatement(
+                "SELECT COUNT(*) FROM entrades "
+                        + "WHERE tipus_entrada_id = ? AND estat = 'venuda'")) {
+
+            stmt.setString(1, tipusId);
+
+            try (ResultSet rs = stmt.executeQuery()) {
+                return rs.next() ? rs.getInt(1) : 0;
+            }
+        }
     }
 }
