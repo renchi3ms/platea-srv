@@ -22,11 +22,13 @@ import java.sql.Connection;
 import com.server.Database;
 
 /**
- * Servidor WebSocket que manté l'estat complet dels clients i objectes seleccionables.
+ * Servidor WebSocket que manté l'estat complet dels clients i objectes
+ * seleccionables.
  *
  * Protocol simplificat:
- *  - Client -> Server:  { "type": "clientData", "data": { ...ClientData... } }
- *  - Server -> Clients: { "type": "state", "clientId": <clientId>, "clients": [ ...ClientData... ], "gameObjects": { ... }, "countdown": n? }
+ * - Client -> Server: { "type": "clientData", "data": { ...ClientData... } }
+ * - Server -> Clients: { "type": "state", "clientId": <clientId>, "clients": [
+ * ...ClientData... ], "gameObjects": { ... }, "countdown": n? }
  */
 public class Main extends WebSocketServer {
 
@@ -75,7 +77,7 @@ public class Main extends WebSocketServer {
         bienvenida.put("message", "Bienvenido al servidor");
 
         conn.send(bienvenida.toString());
-        
+
     }
 
     /** Elimina el client del registre i envia l’STATE complet. */
@@ -88,7 +90,9 @@ public class Main extends WebSocketServer {
     @Override
     public void onMessage(WebSocket conn, String message) {
         try {
+            System.out.println("[RAW] Mensaje crudo recibido: " + message);
             JSONObject obj = new JSONObject(message);
+            System.out.println("[RAW] JSON parseado OK, type=" + obj.optString(K_TYPE, "SIN_TYPE"));
 
             String type = obj.optString(K_TYPE, "");
 
@@ -106,7 +110,7 @@ public class Main extends WebSocketServer {
                 case "esdev" -> {
                     Cataleg cataleg = new ServeiSQLite().carregarCataleg();
                     ArrayList<Esdeveniment> esdeveniments = new ArrayList<Esdeveniment>();
-                    
+
                     for (Esdeveniment e : cataleg.getEsdeveniments()) {
                         esdeveniments.add(e);
                     }
@@ -179,12 +183,12 @@ public class Main extends WebSocketServer {
                                     .filter(e -> e.getId().equals(esdevId))
                                     .findFirst()
                                     .orElse(null);
-                            
+
                             List<int[]> seients = new ArrayList<>();
                             if (seientsJSON != null) {
                                 for (int j = 0; j < seientsJSON.length(); j++) {
                                     JSONArray parella = seientsJSON.getJSONArray(j);
-                                    seients.add(new int[]{ parella.getInt(0), parella.getInt(1) });
+                                    seients.add(new int[] { parella.getInt(0), parella.getInt(1) });
                                 }
                             }
 
@@ -244,7 +248,31 @@ public class Main extends WebSocketServer {
 
                     conn.send(response.toString());
                 }
+            case "validar" -> {
 
+                System.out.println("[VALIDAR] Petición recibida: " + obj);
+
+                JSONObject response = new JSONObject();
+                response.put("type", "validar");
+
+                try {
+                    String localitzador = obj.getString("localitzador");
+                    System.out.println("[VALIDAR] Localitzador a validar: '" + localitzador + "'");
+
+                    response = new ServeiCompres().validarEntrada(localitzador);
+                    response.put("type", "validar");
+
+                    System.out.println("[VALIDAR] Resultado: " + response);
+
+                } catch (Exception e) {
+                    System.out.println("[VALIDAR] EXCEPCIÓN: " + e.getClass().getName() + " - " + e.getMessage());
+                    e.printStackTrace();
+                    response.put("ok", false);
+                    response.put("motiu", e.getMessage() != null ? e.getMessage() : "Error intern");
+                }
+
+                conn.send(response.toString());
+            }
                 case "mapa" -> {
                     JSONObject response = new JSONObject();
                     response.put(K_TYPE, "mapa");
@@ -277,7 +305,8 @@ public class Main extends WebSocketServer {
             }
 
         } catch (Exception ex) {
-            System.out.println("JSON inválido");
+            System.out.println("[ERROR] Excepción procesando mensaje: " + ex.getClass().getName() + " - " + ex.getMessage());
+            ex.printStackTrace();
         }
     }
 
@@ -297,13 +326,14 @@ public class Main extends WebSocketServer {
 
     /** Punt d'entrada. */
     /*
-    public static void main(String[] args) {
-        Main server = new Main(new InetSocketAddress(DEFAULT_PORT));
-        server.start();
-
-        System.out.println("Server running on port " + DEFAULT_PORT + ". Press Ctrl+C to stop it.");
-    }
-    */
+     * public static void main(String[] args) {
+     * Main server = new Main(new InetSocketAddress(DEFAULT_PORT));
+     * server.start();
+     * 
+     * System.out.println("Server running on port " + DEFAULT_PORT +
+     * ". Press Ctrl+C to stop it.");
+     * }
+     */
     public static void main(String[] args) {
         try {
             Connection conn = Database.connect();
@@ -326,8 +356,8 @@ public class Main extends WebSocketServer {
             }
 
         } catch (Exception e) {
-           e.printStackTrace();
-    }
+            e.printStackTrace();
+        }
         Main server = new Main(new InetSocketAddress(DEFAULT_PORT));
         server.start();
 
@@ -335,7 +365,6 @@ public class Main extends WebSocketServer {
     }
 
     private static JSONObject getEsdevResponse(ArrayList<Esdeveniment> esdeveniments, JSONObject response) {
-        
 
         JSONObject esdevsJSON = new JSONObject();
 

@@ -29,9 +29,12 @@ import java.security.SecureRandom;
  */
 public class ServeiCompres {
 
-    /** Registra una compra: crea la compra, les entrades i marca els seients com a venduts. */
+    /**
+     * Registra una compra: crea la compra, les entrades i marca els seients com a
+     * venduts.
+     */
     public String guardarCompra(Esdeveniment esdev, String nom, String correu,
-                              String tipusId, String localitzador, int quantitat, List<int[]> seients) {
+            String tipusId, String localitzador, int quantitat, List<int[]> seients) {
 
         TipusEntrada te = esdev.getTipusEntrades().stream()
                 .filter(t -> t.getId().equals(tipusId))
@@ -99,9 +102,9 @@ public class ServeiCompres {
                         "INSERT INTO seients(zona_id, fila, numero, estat, venda_ref, esdeveniment_id) "
                                 + "VALUES (?, ?, ?, 'V', ?, ?)",
                         Statement.RETURN_GENERATED_KEYS);
-                     PreparedStatement stmtEntrada = conn.prepareStatement(
-                             "INSERT INTO entrades(localitzador, tipus_entrada_id, seient_id, compra_id, "
-                                     + "preu_pagat, data_emissio, estat) VALUES (?, ?, ?, ?, ?, ?, 'venuda')")) {
+                        PreparedStatement stmtEntrada = conn.prepareStatement(
+                                "INSERT INTO entrades(localitzador, tipus_entrada_id, seient_id, compra_id, "
+                                        + "preu_pagat, data_emissio, estat) VALUES (?, ?, ?, ?, ?, ?, 'venuda')")) {
 
                     for (int i = 0; i < quantitat; i++) {
 
@@ -152,17 +155,16 @@ public class ServeiCompres {
 
         List<Venda> vendes = new ArrayList<>();
 
-        String sql =
-                "SELECT e.localitzador, e.tipus_entrada_id, e.seient_id, e.preu_pagat, e.data_emissio, "
-                        + "c.codi, c.comprador_nom, c.comprador_correu, "
-                        + "s.zona_id, s.fila, s.numero "
-                        + "FROM entrades e "
-                        + "JOIN compres c ON c.id = e.compra_id "
-                        + "JOIN seients s ON s.id = e.seient_id "
-                        + "WHERE s.esdeveniment_id = ? AND e.estat = 'venuda'";
+        String sql = "SELECT e.localitzador, e.tipus_entrada_id, e.seient_id, e.preu_pagat, e.data_emissio, "
+                + "c.codi, c.comprador_nom, c.comprador_correu, "
+                + "s.zona_id, s.fila, s.numero "
+                + "FROM entrades e "
+                + "JOIN compres c ON c.id = e.compra_id "
+                + "JOIN seients s ON s.id = e.seient_id "
+                + "WHERE s.esdeveniment_id = ? AND e.estat = 'venuda'";
 
         try (Connection conn = Database.connect();
-             PreparedStatement stmt = conn.prepareStatement(sql)) {
+                PreparedStatement stmt = conn.prepareStatement(sql)) {
 
             stmt.setString(1, esdev.getId());
 
@@ -204,26 +206,25 @@ public class ServeiCompres {
 
         JSONArray entrades = new JSONArray();
 
-        String sql =
-                "SELECT es.nom AS esdeveniment, "
-                        + "te.nom AS tipus_entrada, "
-                        + "z.tipus AS tipus_zona, "
-                        + "CASE WHEN z.tipus = 'numerada' THEN s.fila ELSE NULL END AS fila, "
-                        + "CASE WHEN z.tipus = 'numerada' THEN s.numero ELSE NULL END AS numero, "
-                        + "c.comprador_nom AS titular, "
-                        + "e.localitzador "
-                        + "FROM entrades e "
-                        + "JOIN compres c ON c.id = e.compra_id "
-                        + "JOIN tipus_entrada te ON te.id = e.tipus_entrada_id "
-                        + "JOIN esdeveniments es ON es.id = te.esdeveniment_id "
-                        + "JOIN zones z ON z.id = te.zona_id "
-                        + "LEFT JOIN seients s ON s.id = e.seient_id "
-                        + "WHERE LOWER(TRIM(c.comprador_correu)) = LOWER(TRIM(?)) "
-                        + "AND e.estat = 'venuda' "
-                        + "ORDER BY e.data_emissio DESC";
+        String sql = "SELECT es.nom AS esdeveniment, "
+                + "te.nom AS tipus_entrada, "
+                + "z.tipus AS tipus_zona, "
+                + "CASE WHEN z.tipus = 'numerada' THEN s.fila ELSE NULL END AS fila, "
+                + "CASE WHEN z.tipus = 'numerada' THEN s.numero ELSE NULL END AS numero, "
+                + "c.comprador_nom AS titular, "
+                + "e.localitzador "
+                + "FROM entrades e "
+                + "JOIN compres c ON c.id = e.compra_id "
+                + "JOIN tipus_entrada te ON te.id = e.tipus_entrada_id "
+                + "JOIN esdeveniments es ON es.id = te.esdeveniment_id "
+                + "JOIN zones z ON z.id = te.zona_id "
+                + "LEFT JOIN seients s ON s.id = e.seient_id "
+                + "WHERE LOWER(TRIM(c.comprador_correu)) = LOWER(TRIM(?)) "
+                + "AND e.estat = 'venuda' "
+                + "ORDER BY e.data_emissio DESC";
 
         try (Connection conn = Database.connect();
-            PreparedStatement stmt = conn.prepareStatement(sql)) {
+                PreparedStatement stmt = conn.prepareStatement(sql)) {
 
             stmt.setString(1, correu);
 
@@ -259,7 +260,6 @@ public class ServeiCompres {
         return entrades;
     }
 
-
     /** Claus (zona-fila-numero) dels seients ja venuts d'un esdeveniment. */
     private Set<String> seientsOcupats(Connection conn, String esdevId) throws Exception {
 
@@ -289,7 +289,7 @@ public class ServeiCompres {
      * que construeix ServeiMapa.
      */
     private ArrayList<int[]> nousSeients(Esdeveniment esdev, String zonaId, boolean general,
-                                         Set<String> ocupats, int quantitat) {
+            Set<String> ocupats, int quantitat) {
 
         ArrayList<int[]> candidats = new ArrayList<>();
         MatriuSeients plantilla = esdev.getRecinte().getPlantilla();
@@ -310,7 +310,7 @@ public class ServeiCompres {
                 int numero = general ? f * plantilla.getColumnes() + c + 1 : c + 1;
 
                 if (!ocupats.contains(zonaId + "-" + fila + "-" + numero)) {
-                    candidats.add(new int[]{fila, numero});
+                    candidats.add(new int[] { fila, numero });
                 }
             }
         }
@@ -359,8 +359,8 @@ public class ServeiCompres {
     private String generarCodi(Connection conn) throws Exception {
 
         try (Statement stmt = conn.createStatement();
-             ResultSet rs = stmt.executeQuery(
-                     "SELECT 'V' || CAST((julianday('now') - 2440587.5) * 86400000000000 AS INTEGER)")) {
+                ResultSet rs = stmt.executeQuery(
+                        "SELECT 'V' || CAST((julianday('now') - 2440587.5) * 86400000000000 AS INTEGER)")) {
 
             if (rs.next()) {
                 return rs.getString(1);
@@ -369,4 +369,51 @@ public class ServeiCompres {
 
         throw new IllegalStateException("No s'ha pogut generar el codi de compra.");
     }
+
+    public JSONObject validarEntrada(String localitzador) {
+        JSONObject resposta = new JSONObject();
+        String sql = "SELECT e.estat, " +
+                "c.comprador_nom, " +
+                "te.nom AS tipus_entrada, " +
+                "s.fila, " +
+                "s.numero " +
+                "FROM entrades e " +
+                "JOIN compres c ON c.id = e.compra_id " +
+                "JOIN tipus_entrada te ON te.id = e.tipus_entrada_id " +
+                "LEFT JOIN seients s ON s.id = e.seient_id " +
+                "WHERE e.localitzador = ?";
+
+        try (Connection conn = Database.connect();
+                PreparedStatement stmt = conn.prepareStatement(sql)) {
+            stmt.setString(1, localitzador);
+            try (ResultSet rs = stmt.executeQuery()) {
+                if (!rs.next()) {
+                    resposta.put("ok", false);
+                    resposta.put("motiu", "Localitzador inexistent");
+                    return resposta;
+                }
+                if ("validada".equals(rs.getString("estat"))) {
+                    resposta.put("ok", false);
+                    resposta.put("motiu", "Entrada ja validada");
+                    return resposta;
+                }
+                try (PreparedStatement update = conn.prepareStatement(
+                        "UPDATE entrades SET estat = 'validada' WHERE localitzador = ?")) {
+                    update.setString(1, localitzador);
+                    update.executeUpdate();
+                }
+                resposta.put("ok", true);
+                resposta.put("titular", rs.getString("comprador_nom"));
+                resposta.put("tipusEntrada", rs.getString("tipus_entrada"));
+                if (rs.getObject("fila") != null) {
+                    resposta.put("fila", rs.getInt("fila"));
+                    resposta.put("numero", rs.getInt("numero"));
+                }
+                return resposta;
+            }
+        } catch (Exception e) {
+            throw new RuntimeException("Error validant entrada", e);
+        }
+    }
+
 }
