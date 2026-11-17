@@ -127,7 +127,12 @@ public class Main extends WebSocketServer {
                     JSONObject response = new JSONObject();
                     response.put(K_TYPE, "purchase");
 
+                    Connection dbConn = null;
+
                     try {
+                        dbConn = Database.connect();
+                        dbConn.setAutoCommit(false);
+
                         String nombre = obj.getString("nombre").trim();
                         String correo = obj.getString("correo").trim();
                         JSONArray entradas = obj.getJSONArray("entradas");
@@ -193,7 +198,7 @@ public class Main extends WebSocketServer {
                             }
 
                             String localitzador = new ServeiCompres().guardarCompra(
-                                    esdev, nombre, correo, tipusId, "", quantitat, seients);
+                                    dbConn, esdev, nombre, correo, tipusId, "", quantitat, seients);
 
                             JSONObject resultatEntrada = new JSONObject();
                             resultatEntrada.put("esdevenimentId", esdevId);
@@ -204,14 +209,51 @@ public class Main extends WebSocketServer {
                             localitzadors.put(resultatEntrada);
                         }
 
+                        // Tot OK: es confirma la cistella sencera en un sol commit.
+                        dbConn.commit();
+
                         response.put("status", "OK");
                         response.put("localitzadors", localitzadors);
 
+                    } catch (SeientsOcupatsException e) {
+
+                        try {
+                            if (dbConn != null) {
+                                dbConn.rollback();
+                            }
+                        } catch (Exception e2) {
+                            // ignore
+                        }
+
+                        response.put("status", "ERROR");
+                        response.put("message", e.getMessage());
+                        response.put("seientsError", new JSONArray(e.getSeients()));
+
                     } catch (Exception e) {
+
+                        // Algo ha fallat: es desfà tota la cistella (no se vende NINGUNA entrada).
+                        try {
+                            if (dbConn != null) {
+                                dbConn.rollback();
+                            }
+                        } catch (Exception e2) {
+                            // ignore
+                        }
+
                         response.put("status", "ERROR");
                         response.put("message", e.getMessage() != null
                                 ? e.getMessage()
                                 : "Error en processar la reserva.");
+
+                    } finally {
+
+                        try {
+                            if (dbConn != null) {
+                                dbConn.close();
+                            }
+                        } catch (Exception e2) {
+                            // ignore
+                        }
                     }
 
                     conn.send(response.toString());
