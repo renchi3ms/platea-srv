@@ -9,7 +9,6 @@ import com.model.Venda;
 import com.model.Zona;
 
 import java.util.HashMap;
-import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 
@@ -91,18 +90,12 @@ public class ServeiMapa {
                 Venda venda = vendesPerSeient.get(s.getKey());
 
                 if (venda != null) {
-                    s.setEstat("V");
+                    s.setEstat(venda.getEstat());
                     s.setVendaRef(venda.getCodi());
                 }
             }
         }
 
-        Map<String, Venda> vendesPerCodi = new LinkedHashMap<>();
-
-        for (Venda venda : vendes) {
-            vendesPerCodi.putIfAbsent(venda.getCodi(), venda);
-        }
-
-        return new MapaResultat(mapa, vendesPerCodi);
+        return new MapaResultat(mapa, vendesPerSeient);
     }
 }

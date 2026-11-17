@@ -114,45 +114,24 @@ public class ServeiCompres {
                 Statement.RETURN_GENERATED_KEYS);
              PreparedStatement stmtEntrada = conn.prepareStatement(
                      "INSERT INTO entrades(localitzador, tipus_entrada_id, seient_id, compra_id, "
-                             + "preu_pagat, data_emissio, estat) VALUES (?, ?, ?, ?, ?, ?, 'venuda')")) {
+                             + "preu_pagat, data_emissio, estat) VALUES (?, ?, ?, ?, ?, ?, 'V')")) {
 
             for (int i = 0; i < quantitat; i++) {
 
-                try (PreparedStatement stmtSeient = conn.prepareStatement(
-                        "INSERT INTO seients(zona_id, fila, numero, estat, venda_ref, esdeveniment_id) "
-                                + "VALUES (?, ?, ?, 'V', ?, ?)",
-                        Statement.RETURN_GENERATED_KEYS);
-                        PreparedStatement stmtEntrada = conn.prepareStatement(
-                                "INSERT INTO entrades(localitzador, tipus_entrada_id, seient_id, compra_id, "
-                                        + "preu_pagat, data_emissio, estat) VALUES (?, ?, ?, ?, ?, ?, 'venuda')")) {
+                int[] seient = candidats.get(i);
 
-                    for (int i = 0; i < quantitat; i++) {
+                stmtSeient.setString(1, zonaId);
+                stmtSeient.setInt(2, seient[0]);
+                stmtSeient.setInt(3, seient[1]);
+                stmtSeient.setString(4, codi);
+                stmtSeient.setString(5, esdev.getId());
+                stmtSeient.executeUpdate();
 
-                        int[] seient = candidats.get(i);
+                long seientId;
 
-                        stmtSeient.setString(1, zonaId);
-                        stmtSeient.setInt(2, seient[0]);
-                        stmtSeient.setInt(3, seient[1]);
-                        stmtSeient.setString(4, codi);
-                        stmtSeient.setString(5, esdev.getId());
-                        stmtSeient.executeUpdate();
-
-                        long seientId;
-
-                        try (ResultSet rs = stmtSeient.getGeneratedKeys()) {
-                            if (!rs.next()) {
-                                throw new IllegalStateException("No s'ha pogut reservar el seient.");
-                            }
-                            seientId = rs.getLong(1);
-                        }
-
-                        stmtEntrada.setString(1, i == 0 ? localitzador : localitzador + "-" + (i + 1));
-                        stmtEntrada.setString(2, tipusId);
-                        stmtEntrada.setLong(3, seientId);
-                        stmtEntrada.setLong(4, compraId);
-                        stmtEntrada.setDouble(5, te.getPreu());
-                        stmtEntrada.setString(6, ara.toString());
-                        stmtEntrada.executeUpdate();
+                try (ResultSet rs = stmtSeient.getGeneratedKeys()) {
+                    if (!rs.next()) {
+                        throw new IllegalStateException("No s'ha pogut reservar el seient.");
                     }
                     seientId = rs.getLong(1);
                 }
@@ -175,13 +154,13 @@ public class ServeiCompres {
 
         List<Venda> vendes = new ArrayList<>();
 
-        String sql = "SELECT e.localitzador, e.tipus_entrada_id, e.seient_id, e.preu_pagat, e.data_emissio, "
+        String sql = "SELECT e.localitzador, e.tipus_entrada_id, e.seient_id, e.preu_pagat, e.data_emissio, e.estat, "
                 + "c.codi, c.comprador_nom, c.comprador_correu, "
                 + "s.zona_id, s.fila, s.numero "
                 + "FROM entrades e "
                 + "JOIN compres c ON c.id = e.compra_id "
                 + "JOIN seients s ON s.id = e.seient_id "
-                + "WHERE s.esdeveniment_id = ? AND e.estat = 'venuda'";
+                + "WHERE s.esdeveniment_id = ? AND e.estat IN ('V','P')";
 
         try (Connection conn = Database.connect();
                 PreparedStatement stmt = conn.prepareStatement(sql)) {
@@ -197,7 +176,7 @@ public class ServeiCompres {
                             rs.getInt("fila"),
                             rs.getInt("numero"));
 
-                    seient.setEstat("V");
+                    seient.setEstat(rs.getString("estat"));
                     seient.setVendaRef(rs.getString("codi"));
 
                     Venda venda = new Venda(
@@ -209,6 +188,8 @@ public class ServeiCompres {
                             rs.getDouble("preu_pagat"),
                             rs.getString("tipus_entrada_id"),
                             seient);
+
+                    venda.setEstat(rs.getString("estat"));
 
                     vendes.add(venda);
                 }
@@ -240,7 +221,7 @@ public class ServeiCompres {
                 + "JOIN zones z ON z.id = te.zona_id "
                 + "LEFT JOIN seients s ON s.id = e.seient_id "
                 + "WHERE LOWER(TRIM(c.comprador_correu)) = LOWER(TRIM(?)) "
-                + "AND e.estat = 'venuda' "
+                + "AND e.estat IN ('V','P') "
                 + "ORDER BY e.data_emissio DESC";
 
         try (Connection conn = Database.connect();
@@ -287,7 +268,7 @@ public class ServeiCompres {
 
         try (PreparedStatement stmt = conn.prepareStatement(
                 "SELECT zona_id, fila, numero FROM seients "
-                        + "WHERE esdeveniment_id = ? AND estat = 'V'")) {
+                        + "WHERE esdeveniment_id = ? AND estat <> 'L'")) {
 
             stmt.setString(1, esdevId);
 
@@ -412,13 +393,13 @@ public class ServeiCompres {
                     resposta.put("motiu", "Localitzador inexistent");
                     return resposta;
                 }
-                if ("validada".equals(rs.getString("estat"))) {
+                if ("P".equals(rs.getString("estat"))) {
                     resposta.put("ok", false);
                     resposta.put("motiu", "Entrada ja validada");
                     return resposta;
                 }
                 try (PreparedStatement update = conn.prepareStatement(
-                        "UPDATE entrades SET estat = 'validada' WHERE localitzador = ?")) {
+                        "UPDATE entrades SET estat = 'P' WHERE localitzador = ?")) {
                     update.setString(1, localitzador);
                     update.executeUpdate();
                 }
@@ -442,7 +423,7 @@ public class ServeiCompres {
 
         try (PreparedStatement stmt = conn.prepareStatement(
                 "SELECT COUNT(*) FROM entrades "
-                        + "WHERE tipus_entrada_id = ? AND estat = 'venuda'")) {
+                        + "WHERE tipus_entrada_id = ? AND estat IN ('V','P')")) {
 
             stmt.setString(1, tipusId);
 

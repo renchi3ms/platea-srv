@@ -468,11 +468,11 @@ public class Main extends WebSocketServer {
                     celda.put(s.getFila());
                     celda.put(s.getNumero());
 
-                    if (s.estaVengut()) {
+                    if (!"L".equals(s.getEstat())) {
 
-                        Venda v = resultat.getVendes().get(s.getVendaRef());
+                        Venda v = resultat.getVendes().get(s.getKey());
 
-                        celda.put("V");
+                        celda.put(s.getEstat());
 
                         if (v != null) {
                             celda.put(v.getCodi());
@@ -480,6 +480,7 @@ public class Main extends WebSocketServer {
                             celda.put(v.getCompradorCorreu());
                             celda.put(v.getDataCompra().toString());
                             celda.put(v.getPreuPagat());
+                            celda.put(v.getLocalitzador());
                         }
                     } else {
                         celda.put("L");
