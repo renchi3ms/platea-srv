@@ -1,0 +1,13 @@
+{
+  "files": 7,
+  "columnes": 20,
+  "zones": [
+    ["Z1", "Z1", "Z1", null, null, null, null, null, null, null, null, null, null, null, null, null, null, "Z1", "Z1", "Z1"],
+    ["Z1", "Z1", "Z1", null, "Z2", "Z2", null, null, null, null, null, null, null, null, "Z2", "Z2", null, "Z1", "Z1", "Z1"],
+    ["Z1", "Z1", "Z1", null, "Z2", "Z2", null, null, null, null, null, null, null, null, "Z2", "Z2", null, "Z1", "Z1", "Z1"],
+    ["Z1", "Z1", "Z1", null, "Z2", "Z2", "Z2", "Z2", "Z2", "Z2", "Z2", "Z2", "Z2", "Z2", "Z2", "Z2", null, "Z1", "Z1", "Z1"],
+    ["Z1", "Z1", "Z1", null, "Z2", "Z2", "Z2", "Z2", "Z2", "Z2", "Z2", "Z2", "Z2", "Z2", "Z2", "Z2", null, "Z1", "Z1", "Z1"],
+    ["Z1", "Z1", "Z1", null, "Z2", "Z2", "Z2", "Z2", "Z2", "Z2", "Z2", "Z2", "Z2", "Z2", "Z2", "Z2", null, "Z1", "Z1", "Z1"],
+    ["Z1", "Z1", "Z1", null, null, null, null, null, null, null, null, null, null, null, null, null, null, "Z1", "Z1", "Z1"]
+  ]
+}
